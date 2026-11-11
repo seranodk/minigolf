@@ -5,5 +5,6 @@ Idéer, der venter til senere udgaver:
 - Huller i to niveauer med kanter, bolden kan falde ud over
 - Teleporthuller og flere slags rør
 - Flere baner og temaer
-- Flere spillere på samme telefon
-- Lyd
+- Fælles highscore på tværs af enheder
+- Stjerner og belønninger pr. hul
+- Baggrundsmusik

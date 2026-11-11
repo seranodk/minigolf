@@ -1,12 +1,15 @@
 # Minigolf
 
-Et minigolfspil til mobil og browser: 9 huller set ovenfra, hvor man trækker bagud og slipper for at slå. v0.3.
+Et minigolfspil til mobil og browser: 15 huller set ovenfra, hvor man trækker bagud og slipper for at slå. v0.4.
 
 **Spil:** åbn `index.html`, eller slå GitHub Pages til (Settings → Pages → Branch `main`, mappe `/root`). På mobilen kan siden føjes til hjemmeskærmen og kører så i fuld skærm som en app.
 
 ## Indhold
-- 9 huller med stigende sværhedsgrad og par på hvert hul (banens par er 26)
-- Træk-og-slip: længden giver kraft, retningen sigter, og en prikket linje viser retningen
+- 15 huller med stigende sværhedsgrad og par på hvert hul (banens par er 46)
+- 1–4 spillere på samme telefon med hver sin boldfarve, der skiftes til at slå
+- Træk-og-slip: sigtelinjen viser første afslag på banden, korte put slås automatisk blødere, og et træk kan fortrydes
+- Lydeffekter, der kan slås fra
+- Highscore med de ti bedste runder på enheden
 - Bander og klodser af planker med søm, højde og bløde skygger i sollys fra venstre
 - Filt med struktur og slid ved tee og hul
 - Bakker: ramper og høje med højdekurver og pile, der viser hvilken vej det går ned
@@ -16,10 +19,10 @@ Et minigolfspil til mobil og browser: 9 huller set ovenfra, hvor man trækker ba
 - Rullende bold med glans, spor i græsset, sandsprøjt og vandplask
 - Omgivelser med træer, buske, blomster, sten, hegn og et lille hus
 - Kameraet zoomer ind, når bolden er tæt på hullet
-- Højst 8 slag pr. hul, scorekort efter runden, og den bedste runde gemmes på enheden
+- Højst 8 slag pr. hul og scorekort efter runden
 
 ## Styring
-Sæt fingeren (eller musen) et vilkårligt sted, træk bagud og slip. P eller Esc pauser, F giver fuld skærm.
+Sæt fingeren (eller musen) et vilkårligt sted, træk bagud og slip. Træk tilbage til ringen for at fortryde. P eller Esc pauser, F giver fuld skærm.
 
 ## Filer
 - `index.html` – hele spillet i én fil
