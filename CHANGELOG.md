@@ -1,5 +1,17 @@
 # Release-log – Minigolf
 
+## v0.3 – 11. november 2026
+Ny grafik: lys, materialer og bakker med højde.
+- Bløde skygger, der bliver lysere længere fra bander, klodser og bro, og en mørk kontaktskygge ved foden
+- Sollys fra øverste venstre hjørne: varm solside og kølig skyggeside på alle bander og klodser
+- Bander og klodser er lavet af planker med åretegning, samlinger og søm
+- Filt med struktur, slidt felt ved tee og nedtrådt filt ved hullet
+- Ramper har kam, fod og højdelinjer, og niveauet over eller under rampen er lidt lysere eller mørkere
+- Høje er skyggelagt efter solen med højdekurver og kaster selv en blød skygge
+- Bolden bliver lidt større og får længere skygge, når den ligger højt
+- Sand med revne riller og sænket kant, vand med dybde ved bredden
+- Det faste i banen tegnes én gang pr. hul, så spillet stadig kører flydende
+
 ## v0.2 – 11. november 2026
 Mere avanceret bane og ny grafik.
 - Bander og klodser tegnes med højde, sider og skygger
