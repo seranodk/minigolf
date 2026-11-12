@@ -1,5 +1,16 @@
 # Release-log – Minigolf
 
+## v0.5 – 12. november 2026
+Seks baner med 18 huller hver, i alt 108 huller.
+- Banevælger: vælg bane, før runden starter. Hver bane viser sit par og sin bedste runde
+- Klassikeren (par 58): de kendte huller med vindmøller, rør, bomme og porte, nu 18 i alt med Slangen, Bjergryggen og Tinderne
+- Fem nye lange baner: Engen (par 60), Bakkerne (par 73), Skrænten (par 78), Slugten (par 80) og Bjerget (par 68)
+- De nye baner har længere huller med vinkler og knæk, stigninger, fald, runde toppe, skåle ved hullet og enkelte bunkere, men ingen bevægelige forhindringer
+- Hver bane har sin egen blanding: Bakkerne har flest runde toppe, Skrænten flest stigninger og fald, Slugten mest sand
+- Hullerne på hver bane er ordnet, så de korte og lette kommer først
+- Highscore pr. bane. Listerne fra v0.4 starter forfra, fordi banerne er nye
+- Scorekortet deler de 18 huller i to halvdele
+
 ## v0.4 – 11. november 2026
 Flere huller, lyd, flere spillere, bedre sigte og highscore.
 - 15 huller: seks nye (Bulerne, To broer, Møllebakken, Vulkanen, Slalom og Rørposten). Banens par er nu 46

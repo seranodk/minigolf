@@ -1,15 +1,15 @@
 # Minigolf
 
-Et minigolfspil til mobil og browser: 15 huller set ovenfra, hvor man trækker bagud og slipper for at slå. v0.4.
+Et minigolfspil til mobil og browser: seks baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.5.
 
 **Spil:** åbn `index.html`, eller slå GitHub Pages til (Settings → Pages → Branch `main`, mappe `/root`). På mobilen kan siden føjes til hjemmeskærmen og kører så i fuld skærm som en app.
 
 ## Indhold
-- 15 huller med stigende sværhedsgrad og par på hvert hul (banens par er 46)
+- Seks baner med 18 huller hver (108 huller): Klassikeren med forhindringer og fem lange baner med vinkler, stigninger, fald og runde toppe
 - 1–4 spillere på samme telefon med hver sin boldfarve, der skiftes til at slå
 - Træk-og-slip: sigtelinjen viser første afslag på banden, korte put slås automatisk blødere, og et træk kan fortrydes
 - Lydeffekter, der kan slås fra
-- Highscore med de ti bedste runder på enheden
+- Highscore pr. bane med de ti bedste runder på enheden
 - Bander og klodser af planker med søm, højde og bløde skygger i sollys fra venstre
 - Filt med struktur og slid ved tee og hul
 - Bakker: ramper og høje med højdekurver og pile, der viser hvilken vej det går ned

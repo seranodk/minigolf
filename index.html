@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Minigolf">
-<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.4)">
+<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.5)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Minigolf v0.4</title>
+<title>Minigolf v0.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -77,8 +77,13 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 .hs tr.new td{background:#fff1bf}
 .sc td.w{font-weight:700}
 .card.wide{width:min(400px,100%);padding-left:14px;padding-right:14px}
-.sc th,.sc td{font-size:14px}
-.sc td:first-child{max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc th,.sc td{font-size:13px;padding:5px 0}
+.sc td:first-child{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.cgrid button{padding:9px 6px;border-radius:12px;background:#e7ddc8;color:var(--ink);text-align:left;line-height:1.2}
+.cgrid button b{display:block;font-size:15px;font-weight:700}
+.cgrid button small{display:block;font-size:12px;font-weight:500;color:var(--dim)}
+.cgrid button.on{background:var(--green);color:#fff}.cgrid button.on small{color:#d9f2e0}
 </style>
 </head>
 <body>
@@ -101,7 +106,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
       <h1>Minigolf</h1>
       <div class="ver" id="ver"></div>
       <p id="best"></p>
-      <button class="btn" id="bPlay">Spil 15 huller</button>
+      <button class="btn" id="bPlay">Spil</button>
       <button class="btn alt" id="bHs">Highscore</button>
       <button class="btn alt" id="bHow">Sådan spiller du</button>
       <button class="btn alt snd" id="bSnd">Lyd: til</button>
@@ -110,7 +115,9 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 
   <div class="screen" id="sSetup" hidden>
     <div class="card">
-      <h2>Hvem spiller?</h2>
+      <h2>Vælg bane</h2>
+      <div class="cgrid" id="cRows"></div>
+      <h2 style="margin-top:14px">Hvem spiller?</h2>
       <div class="seg" id="segN"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
       <div id="pRows"></div>
       <button class="btn" id="bStart">Start</button>
@@ -121,6 +128,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
   <div class="screen" id="sHs" hidden>
     <div class="card">
       <h2>Highscore</h2>
+      <div class="seg" id="segHs"></div>
       <p id="hsNote"></p>
       <table class="hs" id="hsTable"></table>
       <button class="btn" id="bHsBack">Tilbage</button>
@@ -183,7 +191,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.4';
+const VERSION='v0.5';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -195,7 +203,22 @@ const ell=(cx,cy,rx,ry,n=20)=>Array.from({length:n},(_,i)=>[cx+rx*Math.cos(i/n*T
 // Per hole: out = outline of the green, blocks = solid boxes, sand/water = polygons,
 // slopes = ramps (ax,ay is the downhill pull), hills = round mounds (k>0) or bowls (k<0),
 // movers = windmill ('spin'), swinging boom ('boom'), sliding gate ('gate'), pipes = tunnels a -> b, bridges = planks over water.
-const HOLES=[
+// A winding fairway: the outline of a road of width w along a centre line, with squared-off ends.
+function road(c,w,ext=40){
+  const hw=w/2,n=c.length,pts=c.map(p=>p.slice());
+  const dir=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy);return [dx/l,dy/l];};
+  const d0=dir(c[1],c[0]),d9=dir(c[n-2],c[n-1]);
+  pts[0]=[c[0][0]+d0[0]*ext,c[0][1]+d0[1]*ext];pts[n-1]=[c[n-1][0]+d9[0]*ext,c[n-1][1]+d9[1]*ext];
+  const side=sg=>pts.map((p,i)=>{
+    const a=i>0?dir(pts[i-1],p):null,b=i<n-1?dir(p,pts[i+1]):null;
+    if(!a||!b){const d=a||b;return [p[0]-d[1]*hw*sg,p[1]+d[0]*hw*sg];}
+    const n1=[-a[1]*sg,a[0]*sg],n2=[-b[1]*sg,b[0]*sg],k=1+n1[0]*n2[0]+n1[1]*n2[1];     // mitre joint
+    return [Math.round((p[0]+(n1[0]+n2[0])/k*hw)*10)/10,Math.round((p[1]+(n1[1]+n2[1])/k*hw)*10)/10];
+  });
+  return side(1).concat(side(-1).reverse());
+}
+let bake=null;
+const CLASSIC=[
  {name:'Ligeud',par:2,tee:[180,505],cup:[180,100],out:rect(115,40,130,520)},
  {name:'Hjørnet',par:2,tee:[120,505],cup:[250,150],out:[[60,560],[60,150],[130,80],[300,80],[300,220],[180,220],[180,560]]},
  {name:'Bakken',par:3,tee:[180,505],cup:[180,125],out:rect(105,40,150,520),slopes:[{poly:rect(105,235,150,90),ax:0,ay:300,lvl:'up'}],sand:[ell(180,64,50,15)]},
@@ -218,6 +241,12 @@ const HOLES=[
   movers:[{type:'gate',x0:110,y0:150,x1:190,y1:150,w:60,h:12,sp:1.4}]},
  {name:'Rørposten',par:4,tee:[250,510],cup:[90,90],out:rect(50,40,260,520),blocks:[rect(50,300,260,22)],pipes:[{a:[90,362],b:[250,272],dir:-Math.PI/2}],
   sand:[ell(170,440,40,22)],movers:[{type:'boom',c:[180,170],r:60,a0:0,amp:1.1,w:1.3}]},
+ {name:'Slangen',par:4,tee:[70,520],cup:[290,92],out:road([[70,520],[70,120],[110,80],[140,80],[180,120],[180,480],[220,520],[250,520],[290,480],[290,80]],80),
+  hills:[{c:[70,330],r:34,k:170}],slopes:[{poly:rect(140,250,80,90),ax:0,ay:-260},{poly:rect(250,250,80,90),ax:0,ay:-230,lvl:'down'}]},
+ {name:'Bjergryggen',par:4,tee:[80,522],cup:[80,78],out:road([[80,520],[80,400],[280,330],[280,250],[80,180],[80,80]],90),
+  hills:[{c:[180,365],r:36,k:175},{c:[180,215],r:36,k:175}],slopes:[{poly:rect(35,432,90,70),ax:0,ay:270},{poly:rect(35,118,90,58),ax:0,ay:-220,lvl:'down'}]},
+ {name:'Tinderne',par:4,tee:[285,517],cup:[285,92],out:road([[285,515],[285,400],[245,360],[115,360],[75,320],[75,235],[115,195],[245,195],[285,155],[285,85]],100),
+  hills:[{c:[285,452],r:34,k:165},{c:[180,360],r:40,k:175},{c:[75,278],r:34,k:170},{c:[180,195],r:40,k:175},{c:[285,92],r:36,k:-140}]},
  {name:'Finalen',par:4,tee:[95,515],cup:[265,490],out:[[40,560],[40,130],[110,60],[250,60],[320,130],[320,560],[210,560],[210,210],[150,210],[150,560]],
   water:[rect(150,60,60,46)],sand:[ell(265,546,44,10)],slopes:[{poly:rect(210,250,110,100),ax:0,ay:230,lvl:'down'}],hills:[{c:[95,310],r:40,k:175}],
   movers:[{type:'spin',c:[180,160],r:32,n:3,w:-1.2}]}
@@ -227,7 +256,8 @@ function inPoly(p,x,y){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){co
   if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c;}return c;}
 const inAny=(ps,x,y)=>{for(const p of ps)if(inPoly(p,x,y))return true;return false;};
 function segDist(g,x,y){const ex=g[2]-g[0],ey=g[3]-g[1],l=ex*ex+ey*ey;let t=l>0?((x-g[0])*ex+(y-g[1])*ey)/l:0;t=t<0?0:t>1?1:t;return Math.hypot(x-g[0]-ex*t,y-g[1]-ey*t);}
-HOLES.forEach((h,i)=>{
+function prepHole(h,i){
+  if(h.segs)return;
   for(const k of ['blocks','sand','water','slopes','hills','movers','pipes','bridges'])h[k]=h[k]||[];
   h.segs=[];h.outSegs=[];
   const add=(p,to)=>{for(let j=0;j<p.length;j++){const a=p[j],b=p[(j+1)%p.length];to.push([a[0],a[1],b[0],b[1]]);}};
@@ -237,8 +267,89 @@ HOLES.forEach((h,i)=>{
     sl.f={mx:(x0+x1)/2,my:(y0+y1)/2,ux,uy,hl:(Math.abs(ux)*(x1-x0)+Math.abs(uy)*(y1-y0))/2,hw:(Math.abs(uy)*(x1-x0)+Math.abs(ux)*(y1-y0))/2};
   }
   h.deco=makeDeco(h,i);
-});
-const PAR=HOLES.reduce((s,h)=>s+h.par,0);
+}
+
+// ---------- The five long courses ----------
+// Each hole is a winding fairway laid along one of these centre lines (corners already cut at 45 degrees),
+// mirrored or played backwards for variety, then given rises, falls, round tops, bowls and the odd bunker.
+// Everything is drawn from a fixed seed per course, so the holes are the same every time.
+const TPL=[
+ {n:'Slangen',w:80,c:[[70,520],[70,120],[110,80],[140,80],[180,120],[180,480],[220,520],[250,520],[290,480],[290,80]]},
+ {n:'Serpentinen',w:96,c:[[90,508],[230,508],[270,468],[270,412],[230,372],[130,372],[90,332],[90,277],[130,237],[230,237],[270,197],[270,142],[230,102],[90,102]]},
+ {n:'Zigzag',w:90,c:[[80,520],[80,400],[280,330],[280,250],[80,180],[80,80]]},
+ {n:'Sneglen',w:80,c:[[55,520],[55,115],[95,75],[265,75],[305,115],[305,485],[265,525],[220,525],[180,485],[180,190]]},
+ {n:'Svinget',w:100,c:[[285,515],[285,400],[245,360],[115,360],[75,320],[75,235],[115,195],[245,195],[285,155],[285,85]]},
+ {n:'Knækket',w:100,c:[[90,520],[90,150],[130,110],[280,110]]},
+ {n:'Hesteskoen',w:96,c:[[80,520],[80,130],[120,90],[240,90],[280,130],[280,500]]},
+ {n:'Albuen',w:110,c:[[100,520],[100,380],[260,260],[260,90]]},
+ {n:'Lynet',w:80,c:[[270,520],[270,440],[90,360],[90,300],[270,220],[270,160],[90,90]]},
+ {n:'Krogen',w:96,c:[[280,520],[280,140],[240,100],[130,100],[90,140],[90,300]]},
+ {n:'Trappen',w:80,c:[[70,520],[70,430],[110,390],[150,390],[190,350],[190,270],[230,230],[250,230],[290,190],[290,80]]},
+ {n:'Hårnålen',w:80,c:[[80,520],[80,200],[120,160],[150,160],[190,200],[190,380],[230,420],[250,420],[290,380],[290,80]]},
+ {n:'Buen',w:100,c:[[270,515],[130,515],[90,475],[90,125],[130,85],[270,85]]},
+ {n:'Skråningen',w:110,c:[[80,520],[80,440],[280,180],[280,80]]},
+ {n:'Dobbeltknækket',w:100,c:[[90,520],[90,380],[130,340],[230,340],[270,300],[270,80]]},
+ {n:'Krøllen',w:90,c:[[80,520],[80,130],[120,90],[240,90],[280,130],[280,330],[240,370],[200,370]]},
+ {n:'Tangen',w:88,c:[[80,520],[80,480],[280,310],[280,250],[80,80]]},
+ {n:'Kanalen',w:96,c:[[180,520],[180,420],[110,350],[110,260],[250,180],[250,80]]},
+ {n:'Firkanten',w:80,c:[[70,520],[70,120],[110,80],[250,80],[290,120],[290,420],[250,460],[190,460]]},
+ {n:'Bølgen',w:110,c:[[90,500],[230,500],[270,460],[270,340],[230,300],[130,300],[90,260],[90,140],[130,100],[270,100]]},
+ {n:'Forskydningen',w:100,c:[[110,520],[110,320],[150,280],[210,280],[250,240],[250,80]]}
+];
+function genHole(tp,rnd,mix,mirror,rev){
+  const c=tp.c.map(p=>[mirror?FW-p[0]:p[0],p[1]]);if(rev)c.reverse();
+  const w=tp.w,hw=w/2,tee=c[0].slice(),cup=c[c.length-1].slice();
+  const h={name:tp.n,tee,cup,out:road(c,w),hills:[],slopes:[],sand:[]};
+  const dT=p=>Math.hypot(p[0]-tee[0],p[1]-tee[1]),dC=p=>Math.hypot(p[0]-cup[0],p[1]-cup[1]);
+  const segs=[];let len=0;
+  for(let i=0;i<c.length-1;i++){const a=c[i],b=c[i+1],l=Math.hypot(b[0]-a[0],b[1]-a[1]);segs.push({a,l,ux:(b[0]-a[0])/l,uy:(b[1]-a[1])/l,used:false});len+=l;}
+  const at=(s,t)=>[s.a[0]+s.ux*t,s.a[1]+s.uy*t];
+  for(const s of segs){   // rises and falls on the straight, square stretches
+    if(s.l<150||(Math.abs(s.ux)>.01&&Math.abs(s.uy)>.01)||rnd()>=mix.slope)continue;
+    const L=70+rnd()*30,t0=35+rnd()*(s.l-70-L),p0=at(s,t0),p1=at(s,t0+L),mid=at(s,t0+L/2);
+    if(dT(mid)<L/2+70||dC(mid)<L/2+60)continue;
+    const rise=rnd()<mix.rise,mag=(rise?250+rnd()*40:200+rnd()*40)*(rise?-1:1);
+    h.slopes.push({poly:Math.abs(s.uy)>.5?rect(s.a[0]-hw,Math.min(p0[1],p1[1]),w,L):rect(Math.min(p0[0],p1[0]),s.a[1]-hw,L,w),ax:Math.round(s.ux*mag),ay:Math.round(s.uy*mag)});
+    s.used=true;
+  }
+  for(const s of segs){   // round tops
+    if(s.used||s.l<110||rnd()>=mix.hill)continue;
+    const p=at(s,40+rnd()*(s.l-80));if(dT(p)<58||dC(p)<58)continue;
+    h.hills.push({c:[Math.round(p[0]),Math.round(p[1])],r:Math.round(Math.min(hw-5,28+rnd()*12)),k:Math.round(165+rnd()*15)});s.used=true;
+  }
+  if(rnd()<mix.bowl)h.hills.push({c:cup.slice(),r:Math.min(hw-4,34),k:-140});
+  for(const s of segs){   // a bunker off to one side
+    if(s.used||s.l<90||rnd()>=mix.sand)continue;
+    const m=at(s,s.l/2),sd=rnd()<.5?1:-1,p=[m[0]-s.uy*hw*.42*sd,m[1]+s.ux*hw*.42*sd];if(dT(p)<50||dC(p)<46)continue;
+    h.sand.push(ell(Math.round(p[0]),Math.round(p[1]),hw*.4,hw*.3,16));s.used=true;
+  }
+  h.len=len;h.par=(len<620?3:len<1050?4:5)+(h.slopes.length>=2&&len<1050?1:0);
+  return h;
+}
+function genCourse(seed,mix,pool){
+  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const holes=[],count={};let last=-1;
+  for(let i=0;i<18;i++){
+    let k;do{k=pool[Math.floor(rnd()*pool.length)];}while(k===last||(count[k]||0)>=2);last=k;count[k]=(count[k]||0)+1;   // no shape more than twice per course
+    holes.push(genHole(TPL[k],rnd,mix,rnd()<.5,rnd()<.35));
+  }
+  holes.sort((a,b)=>a.par-b.par||a.len-b.len);        // short and easy first
+  const seen={};for(const h of holes){seen[h.name]=(seen[h.name]||0)+1;if(seen[h.name]>1)h.name+=' '+seen[h.name];}
+  return holes;
+}
+const ALL=TPL.map((t,i)=>i);
+const COURSES=[
+ {name:'Klassikeren',grass:'#7cc36b',holes:CLASSIC},
+ {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{slope:.25,rise:.5,hill:.6,bowl:.25,sand:.15},[5,7,13,14,17,20,12,4,10,2,6,16,9])},
+ {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{slope:.2,rise:.5,hill:.9,bowl:.45,sand:.1},ALL)},
+ {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{slope:.85,rise:.55,hill:.35,bowl:.2,sand:.15},[0,1,3,6,9,11,12,5,4,14,15,18,19,20,10])},
+ {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{slope:.5,rise:.5,hill:.5,bowl:.2,sand:.45},[0,1,3,11,8,2,6,9,4,15,18,19,16])},
+ {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{slope:.75,rise:.65,hill:.75,bowl:.3,sand:.25},ALL)}
+];
+for(const c of COURSES)c.par=c.holes.reduce((s,h)=>s+h.par,0);
+let HOLES=COURSES[0].holes,PAR=COURSES[0].par,CI=0;
+function setCourse(ci){CI=ci;HOLES=COURSES[ci].holes;PAR=COURSES[ci].par;HOLES.forEach((h,i)=>prepHole(h,ci*100+i));bake=null;}
+
 
 // ---------- Surroundings: trees, bushes, flowers, rocks and a hut, placed away from the course ----------
 function makeDeco(h,idx){
@@ -347,11 +458,13 @@ const pipeSpeed=s=>Math.max(240,Math.min(460,s*.75));
 
 // ---------- Saved data: players, sound setting and the highscore list (kept on this device) ----------
 const COLS=[{m:'#f3f2ea',d:'#b3bbc2',c:'#ffffff'},{m:'#ffd84d',d:'#c79a1a',c:'#ffd84d'},{m:'#ff8fa8',d:'#c4506b',c:'#ff8fa8'},{m:'#8fd3ff',d:'#4a8fbd',c:'#8fd3ff'}];
-const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,hs:[]};
-try{const a=JSON.parse(localStorage.getItem('minigolf.v4')||'null');
+const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,course:0,hs:{}};
+try{const a=JSON.parse(localStorage.getItem('minigolf.v5')||'null');
   if(a){if(a.n>=1&&a.n<=4)store.n=a.n|0;if(Array.isArray(a.names))a.names.slice(0,4).forEach((v,i)=>{if(typeof v==='string'&&v.trim())store.names[i]=v.slice(0,10);});
-    store.snd=a.snd?1:0;if(Array.isArray(a.hs))store.hs=a.hs.filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
-const save=()=>{try{localStorage.setItem('minigolf.v4',JSON.stringify(store));}catch(e){}};
+    store.snd=a.snd?1:0;if(a.course>=0&&a.course<COURSES.length)store.course=a.course|0;
+    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k]))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
+const hsList=ci=>store.hs[ci]||(store.hs[ci]=[]);
+const save=()=>{try{localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Sound: small synthesised effects, no audio files ----------
@@ -460,12 +573,13 @@ function holeCard(){
   g.state='card';show('#sHole',true);
 }
 function startRound(){
+  setCourse(store.course);g.hsc=store.course;
   g.players=[];for(let i=0;i<store.n;i++)g.players.push({name:store.names[i]||('Spiller '+(i+1)),ci:i,scores:[],pos:[0,0],strokes:0,done:false,holed:false});
   g.hint=true;only(null);show('#hud',true);startHole(0);
 }
 function toMenu(){
   g.state='menu';g.paused=false;show('#hud',false);only('#sStart');
-  const b=store.hs[0];$('#best').textContent=b?'Bedste runde: '+b.name+' · '+b.total+' slag ('+rel(b.total-PAR)+')':'15 huller · par '+PAR;
+  $('#best').textContent=COURSES.length+' baner · '+COURSES.reduce((n,c)=>n+c.holes.length,0)+' huller';
   syncSnd();
 }
 function shoot(dx,dy,p){
@@ -483,28 +597,31 @@ function cardHTML(){
     return '<table class="sc"><tr><th>Hul</th>'+hs.map((h,i)=>'<th>'+(a+i+1)+'</th>').join('')+'</tr><tr><td>Par</td>'+hs.map(h=>'<td>'+h.par+'</td>').join('')+'</tr>'+
       g.players.map(p=>'<tr><td>'+(g.players.length>1?'<i class="dot" style="background:'+COLS[p.ci].c+'"></i>'+esc(p.name):'Slag')+'</td>'+
         hs.map((h,i)=>{const v=p.scores[a+i];return '<td class="'+(v<h.par?'u':v>h.par?'o':'')+'">'+v+'</td>';}).join('')+'</tr>').join('')+'</table>';};
-  return half(0,8)+half(8,HOLES.length);
+  const mid=Math.ceil(HOLES.length/2);return half(0,mid)+half(mid,HOLES.length);
 }
 function endRound(){
   const d=new Date(),date=('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
   const mine=g.players.map(p=>({name:p.name,total:sum(p.scores),date,id:Math.random()}));
-  store.hs=store.hs.concat(mine).map((e,i)=>({e,i})).sort((a,b)=>a.e.total-b.e.total||a.i-b.i).map(o=>o.e).slice(0,10);
-  g.fresh=mine.filter(e=>store.hs.includes(e)).map(e=>e.id);save();
+  const list=store.hs[CI]=hsList(CI).concat(mine).map((e,i)=>({e,i})).sort((a,b)=>a.e.total-b.e.total||a.i-b.i).map(o=>o.e).slice(0,10);
+  g.fresh=mine.filter(e=>list.includes(e)).map(e=>e.id);save();
   const tots=mine.map(e=>e.total),low=Math.min(...tots),win=g.players.filter((p,i)=>tots[i]===low),multi=g.players.length>1;
-  const rank=store.hs.findIndex(e=>g.fresh.includes(e.id));
+  const rank=list.findIndex(e=>g.fresh.includes(e.id));
   $('#eTitle').textContent=multi?(win.length>1?'Uafgjort!':win[0].name+' vinder!'):(rank===0?'Ny rekord!':'Runden er slut');
   $('#eTotal').textContent=low;
-  $('#eSub').textContent='slag · '+rel(low-PAR)+(low===PAR?'':' i forhold til par '+PAR)+(rank>=0?' · nr. '+(rank+1)+' på highscoren':'');
+  $('#eSub').textContent='slag · '+rel(low-PAR)+(low===PAR?'':' i forhold til par '+PAR)+' · '+COURSES[CI].name+(rank>=0?' · nr. '+(rank+1)+' på highscoren':'');
   $('#eCard').innerHTML=cardHTML()+(multi?'<table class="hs">'+g.players.map((p,i)=>'<tr><td></td><td><i class="dot" style="background:'+COLS[p.ci].c+'"></i>'+esc(p.name)+'</td><td class="n">'+tots[i]+'</td><td class="d">'+rel(tots[i]-PAR)+'</td></tr>').join('')+'</table>':'');
   g.state='end';only('#sEnd');sfx.win(true);
 }
 function showHs(){
-  $('#hsNote').textContent=store.hs.length?'De ti bedste runder på denne enhed · par '+PAR:'Ingen runder endnu. Spil alle 15 huller for at komme på listen.';
-  $('#hsTable').innerHTML=store.hs.map((e,i)=>'<tr class="'+(g.fresh.includes(e.id)?'new':'')+'"><td>'+(i+1)+'</td><td>'+esc(e.name)+'</td><td class="n">'+e.total+' <span style="font-weight:500;color:var(--dim)">('+rel(e.total-PAR)+')</span></td><td class="d">'+esc(e.date||'')+'</td></tr>').join('');
-  $('#bHsReset').hidden=!store.hs.length;$('#bHsReset').textContent='Nulstil listen';only('#sHs');
+  const ci=g.hsc==null?store.course:g.hsc,list=hsList(ci),c=COURSES[ci];g.hsc=ci;
+  $('#segHs').innerHTML=COURSES.map((x,i)=>'<button data-v="'+i+'" class="'+(i===ci?'on':'')+'">'+(i+1)+'</button>').join('');
+  $('#hsNote').textContent=c.name+' · par '+c.par+(list.length?'':' · ingen runder endnu');
+  $('#hsTable').innerHTML=list.map((e,i)=>'<tr class="'+(g.fresh.includes(e.id)?'new':'')+'"><td>'+(i+1)+'</td><td>'+esc(e.name)+'</td><td class="n">'+e.total+' <span style="font-weight:500;color:var(--dim)">('+rel(e.total-c.par)+')</span></td><td class="d">'+esc(e.date||'')+'</td></tr>').join('');
+  $('#bHsReset').hidden=!list.length;$('#bHsReset').textContent='Nulstil listen';delete $('#bHsReset').dataset.arm;only('#sHs');
 }
 function syncSnd(){document.querySelectorAll('.snd').forEach(b=>b.textContent='Lyd: '+(store.snd?'til':'fra'));}
 function setupRows(){
+  $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>par '+c.par+(b?' · bedst '+b.total:'')+'</small></button>';}).join('');
   document.querySelectorAll('#segN button').forEach(b=>b.classList.toggle('on',+b.dataset.v===store.n));
   $('#pRows').innerHTML=Array.from({length:store.n},(_,i)=>'<div class="prow"><i class="dot" style="background:'+COLS[i].c+'"></i><input maxlength="10" data-i="'+i+'" value="'+esc(store.names[i])+'" aria-label="Navn på spiller '+(i+1)+'" autocomplete="off"></div>').join('');
 }
@@ -699,7 +816,7 @@ function drawPipe(p){
 // ---------- Baked course layer ----------
 // Everything that never moves on a hole (wood, felt, hills, sand, water bed, shadows) is painted once into its own
 // canvas with soft shadows and textures, and that picture is drawn every frame.
-let bake=null,BK=1,woodT=null,feltT=null,WP=null,FP=null;
+let BK=1,woodT=null,feltT=null,WP=null,FP=null;
 const LX=-.6,LY=-.8,HS=12;                      // direction towards the sun (top left); height of a ramp
 function tile(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'));return c;}
 function makeTiles(){
@@ -878,7 +995,7 @@ function draw(){
   const {s,ox,oy,w,h,dpr}=view;
   if(!bake||bake.hole!==g.hole||bake.key!==view.s+'/'+view.dpr)bakeHole();
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.fillStyle='#7cc36b';ctx.fillRect(0,0,w,h);
+  ctx.fillStyle=COURSES[CI].grass;ctx.fillRect(0,0,w,h);
   const z=s*cam.z;
   ctx.setTransform(dpr*z,0,0,dpr*z,dpr*(ox+FW*s/2-cam.x*z),dpr*(oy+FH*s/2-cam.y*z));
   const H=HOLES[g.hole],b=g.ball;
@@ -1012,7 +1129,9 @@ $('#bStart').onclick=startRound;
 $('#bSetupBack').onclick=toMenu;
 $('#bHs').onclick=showHs;
 $('#bHsBack').onclick=toMenu;
-$('#bHsReset').onclick=e=>{if(e.target.dataset.arm){delete e.target.dataset.arm;store.hs=[];g.fresh=[];save();showHs();}else{e.target.dataset.arm='1';e.target.textContent='Tryk igen for at slette';}};
+$('#cRows').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.course=+b.dataset.v;save();setupRows();};
+$('#segHs').onclick=e=>{const b=e.target.closest('button');if(!b)return;g.hsc=+b.dataset.v;showHs();};
+$('#bHsReset').onclick=e=>{if(e.target.dataset.arm){delete e.target.dataset.arm;store.hs[g.hsc]=[];g.fresh=[];save();showHs();}else{e.target.dataset.arm='1';e.target.textContent='Tryk igen for at slette';}};
 $('#bHow').onclick=()=>only('#sHow');
 $('#bHowBack').onclick=toMenu;
 $('#bNext').onclick=()=>{show('#sHole',false);if(g.hole===HOLES.length-1)endRound();else startHole(g.hole+1);};
@@ -1042,10 +1161,10 @@ function frame(ts){
 }
 $('#ver').textContent='VERSION '+VERSION.slice(1);
 document.title='Minigolf '+VERSION;
-resize();toMenu();requestAnimationFrame(frame);
+setCourse(store.course);resize();toMenu();requestAnimationFrame(frame);
 
 // Debug/test handle: lets a test simulate shots without touching the game state.
-window.MG={VERSION,HOLES,g,cam,store,stepBall,MAXV,shoot,hit,startRound,startHole,
+window.MG={VERSION,get HOLES(){return HOLES;},COURSES,setCourse,g,cam,store,stepBall,MAXV,shoot,hit,startRound,startHole,
   sim(hole,x,y,ang,p,t0){const v=MAXV*(.12+.88*p),b={x,y,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v},h=HOLES[hole];let r='roll',n=0,t=t0||0;
     while(r==='roll'&&n++<3000){r=stepBall(b,h,1/60,t);t+=1/60;
       if(r==='pipe'){const q=b.pipe,s=pipeSpeed(Math.hypot(b.vx,b.vy));b.x=q.b[0];b.y=q.b[1];b.vx=Math.cos(q.dir)*s;b.vy=Math.sin(q.dir)*s;r='roll';}}
