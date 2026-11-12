@@ -1,5 +1,16 @@
 # Release-log – Minigolf
 
+## v0.7 – 12. november 2026
+Tilfældig bane, sværere baner og en strammere kant på hullet.
+- Ny bane nr. 7: Tilfældig bane. Spillet laver 18 helt nye huller, hver gang du trykker Ny bane (ca. 16 ms)
+- Seks stilarter: Blandet, Bakket, Snoet, Åben, Vand og Hård
+- Banekode (fx H213601): samme kode giver altid de samme 18 huller. Skriv en kode ind for at spille en bane igen eller sende den videre
+- Hurtigt tjek af alle genererede huller: er der fri vej fra start til hul, ellers laves et nyt hul
+- Ingen highscore på tilfældige baner. Slutskærmen viser banekoden
+- Sværere baner: smallere fairways, flere bunkere, damme og pæle, og nye bevægelige forhindringer på de genererede huller (skydeporte og vindmøller på de brede fairways)
+- Hullets kant er strammere: bolden tipper kun i, hvis den ligger eller triller helt tæt på (cirka 2 px uden for kanten, før 9 px), og den skal ramme hullet langsommere
+- De fem lange baner er lavet om igen, og highscorelisterne på dem er nulstillet
+
 ## v0.6 – 12. november 2026
 Større variation på de fem lange baner, og bolden triller selv det sidste stykke i hul.
 - Alle 90 huller på de fem lange baner er lavet om. Hvert hul har nu sit eget forløb i stedet for at være en spejlvendt eller omvendt udgave af en fast form

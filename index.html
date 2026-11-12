@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Minigolf">
-<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.6)">
+<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.7)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Minigolf v0.6</title>
+<title>Minigolf v0.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -65,6 +65,7 @@ table.sc{width:100%;border-collapse:collapse;margin:12px 0 4px;font-variant-nume
 .seg{display:flex;gap:6px;margin-top:8px}
 .seg button{flex:1;padding:11px 4px;border-radius:12px;background:#e7ddc8;font-size:17px;font-weight:700;color:var(--ink)}
 .seg button.on{background:var(--green);color:#fff}
+.seg.sty{flex-wrap:wrap}.seg.sty button{flex:1 0 30%;padding:9px 4px;font-size:15px}
 .prow{display:flex;align-items:center;gap:10px;margin-top:8px}
 .prow input{flex:1;min-width:0;font-family:var(--f);font-size:17px;font-weight:600;color:var(--ink);padding:10px 12px;border-radius:12px;border:2px solid #d8cdb4;background:#fff}
 .prow input:focus{outline:none;border-color:var(--green)}
@@ -117,6 +118,10 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
     <div class="card">
       <h2>Vælg bane</h2>
       <div class="cgrid" id="cRows"></div>
+      <div id="rnd" hidden>
+        <div class="seg sty" id="segSty"></div>
+        <div class="prow"><input id="rCode" maxlength="7" autocomplete="off" autocapitalize="characters" aria-label="Banekode"><button class="btn alt" id="bNew" style="width:auto;margin:0;padding:10px 16px;font-size:16px">Ny bane</button></div>
+      </div>
       <h2 style="margin-top:14px">Hvem spiller?</h2>
       <div class="seg" id="segN"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div>
       <div id="pRows"></div>
@@ -145,6 +150,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
         <li>Træk fingeren tilbage til ringen, hvor du startede, for at fortryde.</li>
         <li>Tæt på hullet slår du automatisk blødere, så korte put er nemme at styre.</li>
         <li>Er I flere, skiftes I til at slå ét slag ad gangen.</li>
+        <li>Tilfældig bane laver 18 nye huller. Koden (fx B482913) giver altid de samme huller, så I kan spille dem igen eller sende koden videre.</li>
         <li>Bolden preller af på banderne. Sand bremser bolden.</li>
         <li>Vand koster ét strafslag, og bolden lægges tilbage.</li>
         <li>Bakker trækker bolden nedad. Pilene viser, hvilken vej det går ned.</li>
@@ -191,7 +197,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.6';
+const VERSION='v0.7';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -275,10 +281,10 @@ function prepHole(h,i){
 // arena instead. Rises, falls, round tops, bowls, bunkers, ponds, bridges and posts are then placed along it.
 // Everything is drawn from a fixed seed per course, so the holes are the same every time.
 const GRIDS=[
- {xs:[80,180,280],ys:[100,200,300,400,500],w:[66,74]},      // narrow, up to 15 squares: long winding holes
+ {xs:[80,180,280],ys:[100,200,300,400,500],w:[58,66]},      // narrow, up to 15 squares: long winding holes
  {xs:[105,255],ys:[95,235,375,515],w:[96,112]},              // wide: room for tops, ponds and posts
- {xs:[110,250],ys:[90,195,300,405,510],w:[78,84]},
- {xs:[80,180,280],ys:[100,240,380,520],w:[68,74]}
+ {xs:[110,250],ys:[90,195,300,405,510],w:[70,78]},
+ {xs:[80,180,280],ys:[100,240,380,520],w:[60,68]}
 ];
 const dia=(x,y,s)=>[[x,y-s],[x+s,y],[x,y+s],[x-s,y]];
 // A polygon is usable when no walls cross and none come closer than a ball's width or so.
@@ -328,7 +334,7 @@ function genRoad(rnd,mix){
   }
   c.push(raw[raw.length-1]);
   const w=Math.round(G.w[0]+rnd()*(G.w[1]-G.w[0])),hw=w/2,tee=c[0].slice(),cup=c[c.length-1].slice();
-  const h={tee,cup,out:road(c,w),hills:[],slopes:[],sand:[],water:[],bridges:[],blocks:[]};
+  const h={tee,cup,out:road(c,w),hills:[],slopes:[],sand:[],water:[],bridges:[],blocks:[],movers:[]};
   if(!soundShape(h.out))return null;
   const dT=p=>Math.hypot(p[0]-tee[0],p[1]-tee[1]),dC=p=>Math.hypot(p[0]-cup[0],p[1]-cup[1]);
   const segs=[];let len=0;
@@ -355,6 +361,15 @@ function genRoad(rnd,mix){
     h.hills.push({c:[Math.round(p[0]),Math.round(p[1])],r:Math.round(Math.min(hw-4,26+rnd()*16)),k:Math.round(160+rnd()*20)});s.used=true;
   }
   if(rnd()<mix.bowl)h.hills.push({c:cup.slice(),r:Math.min(hw-4,34),k:-140});
+  if(rnd()<(mix.gate||0)){   // a sliding gate (or a windmill on the wide fairways) across a straight stretch
+    const cs=segs.filter(q=>!q.used&&q.l>=124&&square(q)),s=cs[Math.floor(rnd()*cs.length)];
+    if(s){const m=at(s,s.l*(.4+rnd()*.2));
+      if(dT(m)>=80&&dC(m)>=80){
+        if(w>=96&&rnd()<.5){h.movers.push({type:'spin',c:[Math.round(m[0]),Math.round(m[1])],r:Math.round(hw*.5),n:3+Math.floor(rnd()*2),w:(rnd()<.5?-1:1)*Math.round((1.2+rnd()*.6)*10)/10});h.mover='Møllen';}
+        else{const gl=Math.round(w*.44),up=Math.abs(s.uy)>.5,sp=Math.round((1.2+rnd()*.7)*10)/10,mx=Math.round(m[0]),my=Math.round(m[1]);
+          h.movers.push(up?{type:'gate',x0:mx-hw+2,y0:my-6,x1:mx+hw-2-gl,y1:my-6,w:gl,h:12,sp}:{type:'gate',x0:mx-6,y0:my-hw+2,x1:mx-6,y1:my+hw-2-gl,w:12,h:gl,sp});h.mover='Porten';}
+        s.used=true;}}
+  }
   for(const s of segs){   // off to one side: a pond on the wide fairways, otherwise a bunker or a post
     if(s.used||s.l<84)continue;
     const m=at(s,s.l*(.35+rnd()*.3)),sd=rnd()<.5?1:-1,side=f=>[Math.round(m[0]-s.uy*hw*f*sd),Math.round(m[1]+s.ux*hw*f*sd)];
@@ -365,7 +380,7 @@ function genRoad(rnd,mix){
     else if(r<mix.water+mix.sand+mix.pillar){const p=w>=96?side(rnd()*.3):side(.36);h.blocks.push(dia(p[0],p[1],w>=96?13:8));s.used=true;}
   }
   h.len=len;h.par=Math.max(3,Math.min(5,Math.round(len/400)+2+(h.slopes.length>=2?1:0)));
-  h.name=h.bridge?'Broen':h.pond?'Dammen':rises&&falls?'Rutsjebanen':rises>1?'Trappen':falls>1?'Slisken':h.blocks.length?'Pælene':h.hills.filter(q=>q.k>0).length>1?'Toppene':
+  h.name=h.bridge?'Broen':h.mover?h.mover:h.pond?'Dammen':rises&&falls?'Rutsjebanen':rises>1?'Trappen':falls>1?'Slisken':h.blocks.length?'Pælene':h.hills.filter(q=>q.k>0).length>1?'Toppene':
     rises?'Stigningen':falls?'Faldet':h.hills.some(q=>q.k>0)?'Toppen':h.sand.length?'Bunkeren':h.hills.length?'Skålen':diags>1?'Zigzag':turns>3?'Slyngen':turns>1?'Svinget':'Knækket';
   h.alts=[diags>1?'Zigzag':turns>4?'Slangen':turns>3?'Slyngen':turns>1?'Svinget':'Knækket',len>950?'Langdraget':len<480?'Stumpen':w>=96?'Alléen':'Stien',diags?'Skråvejen':turns>2?'Omvejen':'Lige på',w>=96?'Bredsiden':'Smøgen'];
   return h;
@@ -402,12 +417,21 @@ function genArena(rnd,mix){
   h.len=dC(tee);h.par=h.name==='Vulkanen'||kind===3||h.hills.length+h.water.length+h.blocks.length>3?3:2;
   return h;
 }
+// Is there a free way from tee to cup (walls, posts and water blocked)? A coarse flood fill is plenty.
+function reachable(h){
+  const C=6,gw=60,gh=100,seen=new Uint8Array(gw*gh),q=[Math.floor(h.tee[0]/C)+gw*Math.floor(h.tee[1]/C)],goal=Math.floor(h.cup[0]/C)+gw*Math.floor(h.cup[1]/C);
+  seen[q[0]]=1;
+  for(let i=0;i<q.length;i++){const c=q[i];if(c===goal)return true;const cx=c%gw,cy=(c-cx)/gw;
+    for(const e of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+e[0],ny=cy+e[1];if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const k=nx+ny*gw;if(seen[k])continue;seen[k]=1;
+      const x=nx*C+3,y=ny*C+3;if(inPoly(h.out,x,y)&&!inAny(h.blocks,x,y)&&!inAny(h.water,x,y))q.push(k);}}
+  return false;
+}
 function genCourse(seed,mix){
   const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   const holes=[];let arenas=0;
   while(holes.length<18){
     const open=rnd()<mix.arena&&arenas<mix.arenaMax,h=open?genArena(rnd,mix):genRoad(rnd,mix);
-    if(!h)continue;
+    if(!h||!reachable(h))continue;
     if(open)arenas++;
     holes.push(h);
   }
@@ -417,17 +441,35 @@ function genCourse(seed,mix){
     if(seen[h.name]){h.name=base;let n=2;while(seen[base+' '+n])n++;h.name=base+' '+n;}seen[h.name]=1;}
   return holes;
 }
+// The random course: a code like B482913 (a letter for the style, then six digits) always gives the same 18 holes.
+const STY={
+  M:{name:'Blandet',mix:{len:[4,10],grids:[0,1,2,3],arena:.2,arenaMax:3,diag:.3,slope:.45,rise:.5,hill:.5,bowl:.3,sand:.3,water:.2,bridge:.2,pillar:.2,gate:.3}},
+  B:{name:'Bakket',mix:{len:[4,8],grids:[1,2,3,0],arena:.3,arenaMax:5,diag:.3,slope:.4,rise:.5,hill:.95,bowl:.5,sand:.15,water:.1,bridge:.05,pillar:.15,gate:.15}},
+  S:{name:'Snoet',mix:{len:[8,13],grids:[0,0,3],arena:.05,arenaMax:1,diag:.45,slope:.3,rise:.5,hill:.3,bowl:.2,sand:.4,water:0,bridge:.15,pillar:.3,gate:.3}},
+  A:{name:'Åben',mix:{len:[3,6],grids:[1,1,2],arena:.55,arenaMax:9,diag:.3,slope:.3,rise:.5,hill:.6,bowl:.3,sand:.3,water:.3,bridge:.1,pillar:.3,gate:.1}},
+  V:{name:'Vand',mix:{len:[4,9],grids:[1,1,2,0],arena:.2,arenaMax:3,diag:.3,slope:.3,rise:.5,hill:.3,bowl:.2,sand:.15,water:.55,bridge:.5,pillar:.1,gate:.15}},
+  H:{name:'Hård',mix:{len:[6,12],grids:[0,0,3,2],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.6,hill:.5,bowl:.2,sand:.4,water:.3,bridge:.3,pillar:.35,gate:.6}}
+};
+const GRASS=['#7cc36b','#8fcf6c','#9ccb62','#7fbf7a','#a6c66a','#86b78c'];
+const codeOK=c=>/^[MBSAVH][0-9]{6}$/.test(c);
+const newCode=sty=>sty+(100000+Math.floor(Math.random()*900000));
+function buildRandom(code){
+  const c=COURSES[RND],seed=parseInt(code.slice(1),10);
+  c.holes=genCourse((seed*2654435761)>>>0,STY[code[0]].mix);c.par=c.holes.reduce((n,h)=>n+h.par,0);c.grass=GRASS[seed%GRASS.length];c.code=code;
+}
 const COURSES=[
  {name:'Klassikeren',grass:'#7cc36b',holes:CLASSIC},
- {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{len:[3,6],grids:[1,1,2,3],arena:.3,arenaMax:5,diag:.3,slope:.2,rise:.5,hill:.45,bowl:.25,sand:.15,water:.1,bridge:.06,pillar:.06})},
- {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{len:[4,8],grids:[1,2,3,0],arena:.3,arenaMax:5,diag:.3,slope:.15,rise:.5,hill:.95,bowl:.5,sand:.1,water:.06,bridge:0,pillar:.1})},
- {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{len:[5,9],grids:[0,3,2,3],arena:.12,arenaMax:2,diag:.15,slope:.9,rise:.55,hill:.3,bowl:.2,sand:.15,water:.1,bridge:.18,pillar:.06})},
- {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{len:[8,13],grids:[0,0,3],arena:.1,arenaMax:2,diag:.45,slope:.35,rise:.5,hill:.35,bowl:.2,sand:.5,water:0,bridge:.1,pillar:.3})},
- {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{len:[6,12],grids:[0,2,3,1],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.65,hill:.6,bowl:.3,sand:.2,water:.3,bridge:.3,pillar:.15})}
+ {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{len:[3,6],grids:[1,1,2,3],arena:.3,arenaMax:5,diag:.3,slope:.3,rise:.5,hill:.45,bowl:.2,sand:.28,water:.2,bridge:.1,pillar:.15,gate:.25})},
+ {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{len:[4,8],grids:[1,2,3,0],arena:.3,arenaMax:5,diag:.3,slope:.2,rise:.5,hill:.95,bowl:.35,sand:.2,water:.15,bridge:.05,pillar:.2,gate:.2})},
+ {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{len:[5,9],grids:[0,3,2,3],arena:.12,arenaMax:2,diag:.2,slope:.9,rise:.55,hill:.3,bowl:.15,sand:.25,water:.2,bridge:.2,pillar:.15,gate:.25})},
+ {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{len:[8,13],grids:[0,0,3],arena:.1,arenaMax:2,diag:.45,slope:.4,rise:.5,hill:.35,bowl:.15,sand:.5,water:0,bridge:.2,pillar:.4,gate:.5})},
+ {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{len:[6,12],grids:[0,2,3,1],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.65,hill:.6,bowl:.2,sand:.3,water:.3,bridge:.3,pillar:.3,gate:.45})},
+ {name:'Tilfældig bane',grass:'#7cc36b',holes:[],rnd:true,par:0,code:''}
 ];
-for(const c of COURSES)c.par=c.holes.reduce((s,h)=>s+h.par,0);
+const RND=COURSES.length-1;
+for(const c of COURSES.slice(0,RND))c.par=c.holes.reduce((s,h)=>s+h.par,0);
 let HOLES=COURSES[0].holes,PAR=COURSES[0].par,CI=0;
-function setCourse(ci){CI=ci;HOLES=COURSES[ci].holes;PAR=COURSES[ci].par;HOLES.forEach((h,i)=>prepHole(h,ci*100+i));bake=null;}
+function setCourse(ci){if(COURSES[ci].rnd&&COURSES[ci].code!==store.rc)buildRandom(store.rc);CI=ci;HOLES=COURSES[ci].holes;PAR=COURSES[ci].par;HOLES.forEach((h,i)=>prepHole(h,ci*100+i));bake=null;}
 
 
 // ---------- Surroundings: trees, bushes, flowers, rocks and a hut, placed away from the course ----------
@@ -484,7 +526,7 @@ function stepBall(b,h,dt,t){
     for(const m of h.hills){const dx=b.x-m.c[0],dy=b.y-m.c[1],dl=Math.hypot(dx,dy);
       if(dl<m.r&&dl>.01){const k=m.k*Math.sin(Math.PI*dl/m.r)/dl;ax+=dx*k;ay+=dy*k;}}
     {const dx=h.cup[0]-b.x,dy=h.cup[1]-b.y,dl=Math.hypot(dx,dy);   // the lip of the cup: a ball that is nearly there tips in
-      if(dl<CUP+9&&dl>.01){const k=(210+420*(1-Math.max(0,dl-CUP)/9))/dl;ax+=dx*k;ay+=dy*k;}}
+      if(dl<CUP+4&&dl>.01){const k=(120+260*(1-Math.max(0,dl-CUP)/4))/dl;ax+=dx*k;ay+=dy*k;}}
     let s=Math.hypot(b.vx,b.vy),rest=false;
     if(s<5&&Math.hypot(ax,ay)<160){b.vx=b.vy=0;rest=true;}     // a gentle slope cannot start a resting ball
     else{
@@ -528,7 +570,7 @@ function stepBall(b,h,dt,t){
       const sp=Math.hypot(b.vx,b.vy);if(sp>MAXV){b.vx*=MAXV/sp;b.vy*=MAXV/sp;}
     }
     if(!inPoly(h.out,b.x,b.y)||inAny(h.blocks,b.x,b.y)){b.x=px;b.y=py;b.vx*=-.5;b.vy*=-.5;}
-    if(Math.hypot(b.x-h.cup[0],b.y-h.cup[1])<CUP&&Math.hypot(b.vx,b.vy)<340)return 'hole';
+    if(Math.hypot(b.x-h.cup[0],b.y-h.cup[1])<CUP&&Math.hypot(b.vx,b.vy)<300)return 'hole';
     for(const p of h.pipes)if(Math.hypot(b.x-p.a[0],b.y-p.a[1])<9){b.pipe=p;return 'pipe';}
     if(inAny(h.water,b.x,b.y))return 'water';
     if(rest&&b.vx===0&&b.vy===0)return 'stop';
@@ -539,13 +581,14 @@ const pipeSpeed=s=>Math.max(240,Math.min(460,s*.75));
 
 // ---------- Saved data: players, sound setting and the highscore list (kept on this device) ----------
 const COLS=[{m:'#f3f2ea',d:'#b3bbc2',c:'#ffffff'},{m:'#ffd84d',d:'#c79a1a',c:'#ffd84d'},{m:'#ff8fa8',d:'#c4506b',c:'#ff8fa8'},{m:'#8fd3ff',d:'#4a8fbd',c:'#8fd3ff'}];
-const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,course:0,hs:{}};
+const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,course:0,hs:{},rs:'M',rc:''};
 try{const a=JSON.parse(localStorage.getItem('minigolf.v5')||'null');
   if(a){if(a.n>=1&&a.n<=4)store.n=a.n|0;if(Array.isArray(a.names))a.names.slice(0,4).forEach((v,i)=>{if(typeof v==='string'&&v.trim())store.names[i]=v.slice(0,10);});
-    store.snd=a.snd?1:0;if(a.course>=0&&a.course<COURSES.length)store.course=a.course|0;
-    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k])&&(k==='0'||a.layout===6))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
+    store.snd=a.snd?1:0;if(a.course>=0&&a.course<COURSES.length)store.course=a.course|0;if(typeof a.rc==='string'&&codeOK(a.rc)){store.rc=a.rc;store.rs=a.rc[0];}
+    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k])&&(k==='0'||a.layout===7))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
+if(!codeOK(store.rc))store.rc=newCode(store.rs);
 const hsList=ci=>store.hs[ci]||(store.hs[ci]=[]);
-const save=()=>{try{store.layout=6;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
+const save=()=>{try{store.layout=7;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Sound: small synthesised effects, no audio files ----------
@@ -660,7 +703,7 @@ function startRound(){
 }
 function toMenu(){
   g.state='menu';g.paused=false;show('#hud',false);only('#sStart');
-  $('#best').textContent=COURSES.length+' baner · '+COURSES.reduce((n,c)=>n+c.holes.length,0)+' huller';
+  $('#best').textContent=RND+' baner · '+COURSES.slice(0,RND).reduce((n,c)=>n+c.holes.length,0)+' huller · og tilfældige baner';
   syncSnd();
 }
 function shoot(dx,dy,p){
@@ -683,26 +726,30 @@ function cardHTML(){
 function endRound(){
   const d=new Date(),date=('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
   const mine=g.players.map(p=>({name:p.name,total:sum(p.scores),date,id:Math.random()}));
-  const list=store.hs[CI]=hsList(CI).concat(mine).map((e,i)=>({e,i})).sort((a,b)=>a.e.total-b.e.total||a.i-b.i).map(o=>o.e).slice(0,10);
-  g.fresh=mine.filter(e=>list.includes(e)).map(e=>e.id);save();
+  const rnd=COURSES[CI].rnd,list=rnd?[]:store.hs[CI]=hsList(CI).concat(mine).map((e,i)=>({e,i})).sort((a,b)=>a.e.total-b.e.total||a.i-b.i).map(o=>o.e).slice(0,10);
+  g.fresh=mine.filter(e=>list.includes(e)).map(e=>e.id);if(!rnd)save();
   const tots=mine.map(e=>e.total),low=Math.min(...tots),win=g.players.filter((p,i)=>tots[i]===low),multi=g.players.length>1;
   const rank=list.findIndex(e=>g.fresh.includes(e.id));
   $('#eTitle').textContent=multi?(win.length>1?'Uafgjort!':win[0].name+' vinder!'):(rank===0?'Ny rekord!':'Runden er slut');
   $('#eTotal').textContent=low;
-  $('#eSub').textContent='slag · '+rel(low-PAR)+(low===PAR?'':' i forhold til par '+PAR)+' · '+COURSES[CI].name+(rank>=0?' · nr. '+(rank+1)+' på highscoren':'');
+  $('#eSub').textContent='slag · '+rel(low-PAR)+(low===PAR?'':' i forhold til par '+PAR)+' · '+COURSES[CI].name+(rnd?' '+COURSES[CI].code:'')+(rank>=0?' · nr. '+(rank+1)+' på highscoren':'');
   $('#eCard').innerHTML=cardHTML()+(multi?'<table class="hs">'+g.players.map((p,i)=>'<tr><td></td><td><i class="dot" style="background:'+COLS[p.ci].c+'"></i>'+esc(p.name)+'</td><td class="n">'+tots[i]+'</td><td class="d">'+rel(tots[i]-PAR)+'</td></tr>').join('')+'</table>':'');
   g.state='end';only('#sEnd');sfx.win(true);
 }
 function showHs(){
-  const ci=g.hsc==null?store.course:g.hsc,list=hsList(ci),c=COURSES[ci];g.hsc=ci;
-  $('#segHs').innerHTML=COURSES.map((x,i)=>'<button data-v="'+i+'" class="'+(i===ci?'on':'')+'">'+(i+1)+'</button>').join('');
+  const ci=g.hsc==null||g.hsc>=RND?(store.course<RND?store.course:0):g.hsc,list=hsList(ci),c=COURSES[ci];g.hsc=ci;
+  $('#segHs').innerHTML=COURSES.slice(0,RND).map((x,i)=>'<button data-v="'+i+'" class="'+(i===ci?'on':'')+'">'+(i+1)+'</button>').join('');
   $('#hsNote').textContent=c.name+' · par '+c.par+(list.length?'':' · ingen runder endnu');
   $('#hsTable').innerHTML=list.map((e,i)=>'<tr class="'+(g.fresh.includes(e.id)?'new':'')+'"><td>'+(i+1)+'</td><td>'+esc(e.name)+'</td><td class="n">'+e.total+' <span style="font-weight:500;color:var(--dim)">('+rel(e.total-c.par)+')</span></td><td class="d">'+esc(e.date||'')+'</td></tr>').join('');
   $('#bHsReset').hidden=!list.length;$('#bHsReset').textContent='Nulstil listen';delete $('#bHsReset').dataset.arm;only('#sHs');
 }
 function syncSnd(){document.querySelectorAll('.snd').forEach(b=>b.textContent='Lyd: '+(store.snd?'til':'fra'));}
 function setupRows(){
-  $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>par '+c.par+(b?' · bedst '+b.total:'')+'</small></button>';}).join('');
+  if(COURSES[RND].code!==store.rc)buildRandom(store.rc);
+  $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=c.rnd?null:hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>par '+c.par+(c.rnd?' · '+c.code:b?' · bedst '+b.total:'')+'</small></button>';}).join('');
+  $('#rnd').hidden=store.course!==RND;
+  $('#segSty').innerHTML=Object.keys(STY).map(k=>'<button data-v="'+k+'" class="'+(k===store.rs?'on':'')+'">'+STY[k].name+'</button>').join('');
+  $('#rCode').value=store.rc;
   document.querySelectorAll('#segN button').forEach(b=>b.classList.toggle('on',+b.dataset.v===store.n));
   $('#pRows').innerHTML=Array.from({length:store.n},(_,i)=>'<div class="prow"><i class="dot" style="background:'+COLS[i].c+'"></i><input maxlength="10" data-i="'+i+'" value="'+esc(store.names[i])+'" aria-label="Navn på spiller '+(i+1)+'" autocomplete="off"></div>').join('');
 }
@@ -1211,6 +1258,9 @@ $('#bSetupBack').onclick=toMenu;
 $('#bHs').onclick=showHs;
 $('#bHsBack').onclick=toMenu;
 $('#cRows').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.course=+b.dataset.v;save();setupRows();};
+$('#segSty').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.rs=b.dataset.v;store.rc=newCode(store.rs);save();setupRows();};
+$('#bNew').onclick=()=>{store.rc=newCode(store.rs);save();setupRows();};
+$('#rCode').onchange=e=>{const v=e.target.value.trim().toUpperCase();if(codeOK(v)){store.rc=v;store.rs=v[0];save();}setupRows();};
 $('#segHs').onclick=e=>{const b=e.target.closest('button');if(!b)return;g.hsc=+b.dataset.v;showHs();};
 $('#bHsReset').onclick=e=>{if(e.target.dataset.arm){delete e.target.dataset.arm;store.hs[g.hsc]=[];g.fresh=[];save();showHs();}else{e.target.dataset.arm='1';e.target.textContent='Tryk igen for at slette';}};
 $('#bHow').onclick=()=>only('#sHow');
