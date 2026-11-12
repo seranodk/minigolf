@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Minigolf">
-<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.5)">
+<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.6)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Minigolf v0.5</title>
+<title>Minigolf v0.6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -191,7 +191,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.5';
+const VERSION='v0.6';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -270,81 +270,160 @@ function prepHole(h,i){
 }
 
 // ---------- The five long courses ----------
-// Each hole is a winding fairway laid along one of these centre lines (corners already cut at 45 degrees),
-// mirrored or played backwards for variety, then given rises, falls, round tops, bowls and the odd bunker.
+// Every hole is laid out afresh: a fairway wanders at random over a coarse grid (different grids give narrow and wide
+// fairways), some corners are cut into diagonals, the rest get a 45 degree bank, and now and then the hole is an open
+// arena instead. Rises, falls, round tops, bowls, bunkers, ponds, bridges and posts are then placed along it.
 // Everything is drawn from a fixed seed per course, so the holes are the same every time.
-const TPL=[
- {n:'Slangen',w:80,c:[[70,520],[70,120],[110,80],[140,80],[180,120],[180,480],[220,520],[250,520],[290,480],[290,80]]},
- {n:'Serpentinen',w:96,c:[[90,508],[230,508],[270,468],[270,412],[230,372],[130,372],[90,332],[90,277],[130,237],[230,237],[270,197],[270,142],[230,102],[90,102]]},
- {n:'Zigzag',w:90,c:[[80,520],[80,400],[280,330],[280,250],[80,180],[80,80]]},
- {n:'Sneglen',w:80,c:[[55,520],[55,115],[95,75],[265,75],[305,115],[305,485],[265,525],[220,525],[180,485],[180,190]]},
- {n:'Svinget',w:100,c:[[285,515],[285,400],[245,360],[115,360],[75,320],[75,235],[115,195],[245,195],[285,155],[285,85]]},
- {n:'Knækket',w:100,c:[[90,520],[90,150],[130,110],[280,110]]},
- {n:'Hesteskoen',w:96,c:[[80,520],[80,130],[120,90],[240,90],[280,130],[280,500]]},
- {n:'Albuen',w:110,c:[[100,520],[100,380],[260,260],[260,90]]},
- {n:'Lynet',w:80,c:[[270,520],[270,440],[90,360],[90,300],[270,220],[270,160],[90,90]]},
- {n:'Krogen',w:96,c:[[280,520],[280,140],[240,100],[130,100],[90,140],[90,300]]},
- {n:'Trappen',w:80,c:[[70,520],[70,430],[110,390],[150,390],[190,350],[190,270],[230,230],[250,230],[290,190],[290,80]]},
- {n:'Hårnålen',w:80,c:[[80,520],[80,200],[120,160],[150,160],[190,200],[190,380],[230,420],[250,420],[290,380],[290,80]]},
- {n:'Buen',w:100,c:[[270,515],[130,515],[90,475],[90,125],[130,85],[270,85]]},
- {n:'Skråningen',w:110,c:[[80,520],[80,440],[280,180],[280,80]]},
- {n:'Dobbeltknækket',w:100,c:[[90,520],[90,380],[130,340],[230,340],[270,300],[270,80]]},
- {n:'Krøllen',w:90,c:[[80,520],[80,130],[120,90],[240,90],[280,130],[280,330],[240,370],[200,370]]},
- {n:'Tangen',w:88,c:[[80,520],[80,480],[280,310],[280,250],[80,80]]},
- {n:'Kanalen',w:96,c:[[180,520],[180,420],[110,350],[110,260],[250,180],[250,80]]},
- {n:'Firkanten',w:80,c:[[70,520],[70,120],[110,80],[250,80],[290,120],[290,420],[250,460],[190,460]]},
- {n:'Bølgen',w:110,c:[[90,500],[230,500],[270,460],[270,340],[230,300],[130,300],[90,260],[90,140],[130,100],[270,100]]},
- {n:'Forskydningen',w:100,c:[[110,520],[110,320],[150,280],[210,280],[250,240],[250,80]]}
+const GRIDS=[
+ {xs:[80,180,280],ys:[100,200,300,400,500],w:[66,74]},      // narrow, up to 15 squares: long winding holes
+ {xs:[105,255],ys:[95,235,375,515],w:[96,112]},              // wide: room for tops, ponds and posts
+ {xs:[110,250],ys:[90,195,300,405,510],w:[78,84]},
+ {xs:[80,180,280],ys:[100,240,380,520],w:[68,74]}
 ];
-function genHole(tp,rnd,mix,mirror,rev){
-  const c=tp.c.map(p=>[mirror?FW-p[0]:p[0],p[1]]);if(rev)c.reverse();
-  const w=tp.w,hw=w/2,tee=c[0].slice(),cup=c[c.length-1].slice();
-  const h={name:tp.n,tee,cup,out:road(c,w),hills:[],slopes:[],sand:[]};
+const dia=(x,y,s)=>[[x,y-s],[x+s,y],[x,y+s],[x-s,y]];
+// A polygon is usable when no walls cross and none come closer than a ball's width or so.
+function soundShape(p){
+  const n=p.length,o=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  for(let i=0;i<n;i++){
+    const a=p[i],b=p[(i+1)%n];
+    if(a[0]<14||a[0]>FW-14||a[1]<34||a[1]>FH-34)return false;
+    for(let j=i+2;j<n;j++){
+      if(i===0&&j===n-1)continue;
+      const c=p[j],d=p[(j+1)%n];
+      if(o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0)return false;
+    }
+    for(let j=0;j<n;j++){if(j===i||(j+1)%n===i)continue;if(segDist([p[j][0],p[j][1],p[(j+1)%n][0],p[(j+1)%n][1]],a[0],a[1])<20)return false;}
+  }
+  return true;
+}
+function genRoad(rnd,mix){
+  const G=GRIDS[mix.grids[Math.floor(rnd()*mix.grids.length)]],nx=G.xs.length,ny=G.ys.length;
+  const want=Math.min(nx*ny-1,mix.len[0]+Math.floor(rnd()*(mix.len[1]-mix.len[0]+1)));
+  // random walk over the grid without crossing itself; it likes to keep going straight
+  const used=new Set();let x=Math.floor(rnd()*nx),y=rnd()<.7?ny-1:Math.floor(rnd()*ny),dx=0,dy=-1;const cells=[[x,y]];used.add(x+','+y);
+  while(cells.length<want){
+    const opts=[];let tot=0;
+    for(const e of [[1,0],[-1,0],[0,1],[0,-1]]){const tx=x+e[0],ty=y+e[1];if(tx<0||ty<0||tx>=nx||ty>=ny||used.has(tx+','+ty))continue;const wt=e[0]===dx&&e[1]===dy?1.8:1;opts.push([e[0],e[1],wt]);tot+=wt;}
+    if(!opts.length)break;
+    let r=rnd()*tot,pick=opts[0];for(const q of opts){r-=q[2];if(r<=0){pick=q;break;}}
+    dx=pick[0];dy=pick[1];x+=dx;y+=dy;cells.push([x,y]);used.add(x+','+y);
+  }
+  if(cells.length<Math.min(want,Math.max(3,mix.len[0])))return null;
+  // cut some corners into diagonals (only where the square inside the bend is free)
+  const keep=cells.map(()=>true);let diags=0;
+  for(let i=1;i<cells.length-1;i++){
+    const a=cells[i-1],b=cells[i],e=cells[i+1];
+    if(keep[i-1]&&a[0]!==e[0]&&a[1]!==e[1]&&!used.has((a[0]+e[0]-b[0])+','+(a[1]+e[1]-b[1]))&&rnd()<mix.diag){keep[i]=false;diags++;}
+  }
+  const raw=cells.filter((q,i)=>keep[i]).map(q=>[G.xs[q[0]],G.ys[q[1]]]);
+  // bank the remaining right-angle corners, drop points on a straight line
+  const c=[raw[0]];let turns=0;
+  for(let i=1;i<raw.length-1;i++){
+    const p=raw[i],a=raw[i-1],b=raw[i+1],l1=Math.hypot(p[0]-a[0],p[1]-a[1]),l2=Math.hypot(b[0]-p[0],b[1]-p[1]);
+    const d1=[(p[0]-a[0])/l1,(p[1]-a[1])/l1],d2=[(b[0]-p[0])/l2,(b[1]-p[1])/l2],dot=d1[0]*d2[0]+d1[1]*d2[1];
+    if(dot>.999)continue;
+    turns++;
+    const cut=Math.min(40,l1*.4,l2*.4);
+    if(Math.abs(dot)<.1&&cut>=22)c.push([p[0]-d1[0]*cut,p[1]-d1[1]*cut],[p[0]+d2[0]*cut,p[1]+d2[1]*cut]);else c.push(p);
+  }
+  c.push(raw[raw.length-1]);
+  const w=Math.round(G.w[0]+rnd()*(G.w[1]-G.w[0])),hw=w/2,tee=c[0].slice(),cup=c[c.length-1].slice();
+  const h={tee,cup,out:road(c,w),hills:[],slopes:[],sand:[],water:[],bridges:[],blocks:[]};
+  if(!soundShape(h.out))return null;
   const dT=p=>Math.hypot(p[0]-tee[0],p[1]-tee[1]),dC=p=>Math.hypot(p[0]-cup[0],p[1]-cup[1]);
   const segs=[];let len=0;
   for(let i=0;i<c.length-1;i++){const a=c[i],b=c[i+1],l=Math.hypot(b[0]-a[0],b[1]-a[1]);segs.push({a,l,ux:(b[0]-a[0])/l,uy:(b[1]-a[1])/l,used:false});len+=l;}
-  const at=(s,t)=>[s.a[0]+s.ux*t,s.a[1]+s.uy*t];
+  const at=(s,t)=>[s.a[0]+s.ux*t,s.a[1]+s.uy*t],square=s=>Math.abs(s.ux)<.01||Math.abs(s.uy)<.01;
+  let rises=0,falls=0;
   for(const s of segs){   // rises and falls on the straight, square stretches
-    if(s.l<150||(Math.abs(s.ux)>.01&&Math.abs(s.uy)>.01)||rnd()>=mix.slope)continue;
-    const L=70+rnd()*30,t0=35+rnd()*(s.l-70-L),p0=at(s,t0),p1=at(s,t0+L),mid=at(s,t0+L/2);
-    if(dT(mid)<L/2+70||dC(mid)<L/2+60)continue;
-    const rise=rnd()<mix.rise,mag=(rise?250+rnd()*40:200+rnd()*40)*(rise?-1:1);
+    if(s.l<118||!square(s)||rnd()>=mix.slope)continue;
+    const L=Math.min(s.l-56,62+rnd()*30),t0=28+rnd()*(s.l-56-L),p0=at(s,t0),p1=at(s,t0+L),mid=at(s,t0+L/2);
+    if(dT(mid)<L/2+64||dC(mid)<L/2+56)continue;
+    const rise=rnd()<mix.rise,mag=(rise?250+rnd()*40:200+rnd()*40)*(rise?-1:1);rise?rises++:falls++;
     h.slopes.push({poly:Math.abs(s.uy)>.5?rect(s.a[0]-hw,Math.min(p0[1],p1[1]),w,L):rect(Math.min(p0[0],p1[0]),s.a[1]-hw,L,w),ax:Math.round(s.ux*mag),ay:Math.round(s.uy*mag)});
     s.used=true;
   }
+  for(const s of segs){   // a pond with a bridge across an upright stretch
+    if(s.used||s.l<100||Math.abs(s.uy)<.99||rnd()>=mix.bridge)continue;
+    const m=at(s,s.l/2);if(dT(m)<80||dC(m)<70)continue;
+    const bw=Math.max(30,Math.round(w*.42)),off=Math.round((rnd()-.5)*(w-bw-16)),bx=m[0]+off-bw/2,y0=Math.round(m[1]-23);
+    h.water.push(rect(m[0]-hw,y0,bx-(m[0]-hw),46),rect(bx+bw,y0,m[0]+hw-bx-bw,46));h.bridges.push(rect(bx,y0,bw,46));s.used=true;h.bridge=true;
+  }
   for(const s of segs){   // round tops
-    if(s.used||s.l<110||rnd()>=mix.hill)continue;
-    const p=at(s,40+rnd()*(s.l-80));if(dT(p)<58||dC(p)<58)continue;
-    h.hills.push({c:[Math.round(p[0]),Math.round(p[1])],r:Math.round(Math.min(hw-5,28+rnd()*12)),k:Math.round(165+rnd()*15)});s.used=true;
+    if(s.used||s.l<96||rnd()>=mix.hill)continue;
+    const p=at(s,34+rnd()*(s.l-68));if(dT(p)<56||dC(p)<56)continue;
+    h.hills.push({c:[Math.round(p[0]),Math.round(p[1])],r:Math.round(Math.min(hw-4,26+rnd()*16)),k:Math.round(160+rnd()*20)});s.used=true;
   }
   if(rnd()<mix.bowl)h.hills.push({c:cup.slice(),r:Math.min(hw-4,34),k:-140});
-  for(const s of segs){   // a bunker off to one side
-    if(s.used||s.l<90||rnd()>=mix.sand)continue;
-    const m=at(s,s.l/2),sd=rnd()<.5?1:-1,p=[m[0]-s.uy*hw*.42*sd,m[1]+s.ux*hw*.42*sd];if(dT(p)<50||dC(p)<46)continue;
-    h.sand.push(ell(Math.round(p[0]),Math.round(p[1]),hw*.4,hw*.3,16));s.used=true;
+  for(const s of segs){   // off to one side: a pond on the wide fairways, otherwise a bunker or a post
+    if(s.used||s.l<84)continue;
+    const m=at(s,s.l*(.35+rnd()*.3)),sd=rnd()<.5?1:-1,side=f=>[Math.round(m[0]-s.uy*hw*f*sd),Math.round(m[1]+s.ux*hw*f*sd)];
+    if(dT(m)<62||dC(m)<58)continue;
+    const r=rnd();
+    if(w>=96&&r<mix.water){const p=side(.5);h.water.push(ell(p[0],p[1],hw*.36,hw*.3,16));h.pond=true;s.used=true;}
+    else if(r<mix.water+mix.sand){const p=side(.42);h.sand.push(ell(p[0],p[1],hw*.4,hw*.3,16));s.used=true;}
+    else if(r<mix.water+mix.sand+mix.pillar){const p=w>=96?side(rnd()*.3):side(.36);h.blocks.push(dia(p[0],p[1],w>=96?13:8));s.used=true;}
   }
-  h.len=len;h.par=(len<620?3:len<1050?4:5)+(h.slopes.length>=2&&len<1050?1:0);
+  h.len=len;h.par=Math.max(3,Math.min(5,Math.round(len/400)+2+(h.slopes.length>=2?1:0)));
+  h.name=h.bridge?'Broen':h.pond?'Dammen':rises&&falls?'Rutsjebanen':rises>1?'Trappen':falls>1?'Slisken':h.blocks.length?'Pælene':h.hills.filter(q=>q.k>0).length>1?'Toppene':
+    rises?'Stigningen':falls?'Faldet':h.hills.some(q=>q.k>0)?'Toppen':h.sand.length?'Bunkeren':h.hills.length?'Skålen':diags>1?'Zigzag':turns>3?'Slyngen':turns>1?'Svinget':'Knækket';
+  h.alts=[diags>1?'Zigzag':turns>4?'Slangen':turns>3?'Slyngen':turns>1?'Svinget':'Knækket',len>950?'Langdraget':len<480?'Stumpen':w>=96?'Alléen':'Stien',diags?'Skråvejen':turns>2?'Omvejen':'Lige på',w>=96?'Bredsiden':'Smøgen'];
   return h;
 }
-function genCourse(seed,mix,pool){
+// Open holes without a fairway: the shape itself and what lies on it make the hole.
+function genArena(rnd,mix){
+  const j=a=>Math.round((rnd()-.5)*2*a),kind=Math.floor(rnd()*5),h={hills:[],slopes:[],sand:[],water:[],bridges:[],blocks:[]};
+  let tee,cup;
+  if(kind===0){const y0=70+j(25),y1=530+j(25);h.name='Ottekanten';
+    h.out=[[105,y0],[255,y0],[330,y0+95],[330,y1-95],[255,y1],[105,y1],[30,y1-95],[30,y0+95]];tee=[180+j(50),y1-45];cup=[180+j(70),y0+60+Math.floor(rnd()*90)];}
+  else if(kind===1){const y0=50+j(12),y1=552+j(8),s=95+j(20);h.name='Sekskanten';
+    h.out=[[180,y0],[325,y0+s],[325,y1-s],[180,y1],[35,y1-s],[35,y0+s]];tee=[180,y1-58];cup=[180+j(70),y0+s+j(25)];}
+  else if(kind===2){const n=38+Math.floor(rnd()*26),m=300+j(40);h.name='Timeglasset';
+    h.out=[[50,560],[50,m+105],[180-n,m],[50,m-105],[50,40],[310,40],[310,m-105],[180+n,m],[310,m+105],[310,560]];tee=[180+j(80),512];cup=[180+j(90),92];}
+  else if(kind===3){const cx=180+j(22),hh=110+Math.floor(rnd()*50),hw2=28+Math.floor(rnd()*22);h.name='Øen';
+    h.out=rect(40,40,280,520);h.blocks.push([[cx,300-hh],[cx+hw2,300],[cx,300+hh],[cx-hw2,300]]);tee=[cx+j(60),512];cup=[cx+j(60),90];}
+  else{const nx=180+j(55),t=200+j(30);h.name='Tragten';
+    h.out=[[40,560],[40,t+140],[nx-48,t],[nx-48,40],[nx+48,40],[nx+48,t],[320,t+140],[320,560]];tee=[180+j(90),515];cup=[nx,88];}
+  h.tee=tee;h.cup=cup;
+  if(!soundShape(h.out)||!inPoly(h.out,tee[0],tee[1])||!inPoly(h.out,cup[0],cup[1]))return null;
+  const dT=p=>Math.hypot(p[0]-tee[0],p[1]-tee[1]),dC=p=>Math.hypot(p[0]-cup[0],p[1]-cup[1]);
+  const spot=(m,far)=>{for(let t=0;t<30;t++){const p=[40+Math.round(rnd()*280),80+Math.round(rnd()*440)];
+    if(!inPoly(h.out,p[0],p[1])||inAny(h.blocks,p[0],p[1])||dT(p)<62||dC(p)<far)continue;
+    let ok=true;for(const g of h.out.map((q,i)=>[q[0],q[1],h.out[(i+1)%h.out.length][0],h.out[(i+1)%h.out.length][1]]))if(segDist(g,p[0],p[1])<m)ok=false;
+    for(const q of taken)if(Math.hypot(q[0]-p[0],q[1]-p[1])<q[2]+m)ok=false;
+    if(ok){taken.push([p[0],p[1],m]);return p;}}return null;},taken=[];
+  if(rnd()<.3&&kind!==3){h.hills.push({c:cup.slice(),r:52+Math.floor(rnd()*12),k:150});h.name='Vulkanen';taken.push([cup[0],cup[1],60]);}   // the cup on top of a broad mound
+  else if(rnd()<mix.bowl+.2){h.hills.push({c:cup.slice(),r:38,k:-145});taken.push([cup[0],cup[1],38]);}
+  const tops=1+Math.floor(rnd()*(1+mix.hill*3));
+  for(let i=0;i<tops;i++){const r=30+Math.floor(rnd()*16),p=spot(r*.8,56);if(p)h.hills.push({c:p,r,k:Math.round(160+rnd()*20)});}
+  if(rnd()<mix.water+.15){const p=spot(34,60);if(p)h.water.push(ell(p[0],p[1],26+rnd()*12,20+rnd()*10,16));}
+  for(let i=0;i<2;i++)if(rnd()<mix.sand+.2){const p=spot(30,50);if(p)h.sand.push(ell(p[0],p[1],22+rnd()*14,18+rnd()*10,16));}
+  for(let i=0;i<2;i++)if(rnd()<mix.pillar+.1){const p=spot(26,50);if(p)h.blocks.push(dia(p[0],p[1],13));}
+  h.len=dC(tee);h.par=h.name==='Vulkanen'||kind===3||h.hills.length+h.water.length+h.blocks.length>3?3:2;
+  return h;
+}
+function genCourse(seed,mix){
   const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
-  const holes=[],count={};let last=-1;
-  for(let i=0;i<18;i++){
-    let k;do{k=pool[Math.floor(rnd()*pool.length)];}while(k===last||(count[k]||0)>=2);last=k;count[k]=(count[k]||0)+1;   // no shape more than twice per course
-    holes.push(genHole(TPL[k],rnd,mix,rnd()<.5,rnd()<.35));
+  const holes=[];let arenas=0;
+  while(holes.length<18){
+    const open=rnd()<mix.arena&&arenas<mix.arenaMax,h=open?genArena(rnd,mix):genRoad(rnd,mix);
+    if(!h)continue;
+    if(open)arenas++;
+    holes.push(h);
   }
   holes.sort((a,b)=>a.par-b.par||a.len-b.len);        // short and easy first
-  const seen={};for(const h of holes){seen[h.name]=(seen[h.name]||0)+1;if(seen[h.name]>1)h.name+=' '+seen[h.name];}
+  const seen={};        // a name is used once per course: fall back on names for the shape, then on a number
+  for(const h of holes){const base=h.name;for(const a of h.alts||[]){if(!seen[h.name])break;h.name=a;}
+    if(seen[h.name]){h.name=base;let n=2;while(seen[base+' '+n])n++;h.name=base+' '+n;}seen[h.name]=1;}
   return holes;
 }
-const ALL=TPL.map((t,i)=>i);
 const COURSES=[
  {name:'Klassikeren',grass:'#7cc36b',holes:CLASSIC},
- {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{slope:.25,rise:.5,hill:.6,bowl:.25,sand:.15},[5,7,13,14,17,20,12,4,10,2,6,16,9])},
- {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{slope:.2,rise:.5,hill:.9,bowl:.45,sand:.1},ALL)},
- {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{slope:.85,rise:.55,hill:.35,bowl:.2,sand:.15},[0,1,3,6,9,11,12,5,4,14,15,18,19,20,10])},
- {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{slope:.5,rise:.5,hill:.5,bowl:.2,sand:.45},[0,1,3,11,8,2,6,9,4,15,18,19,16])},
- {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{slope:.75,rise:.65,hill:.75,bowl:.3,sand:.25},ALL)}
+ {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{len:[3,6],grids:[1,1,2,3],arena:.3,arenaMax:5,diag:.3,slope:.2,rise:.5,hill:.45,bowl:.25,sand:.15,water:.1,bridge:.06,pillar:.06})},
+ {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{len:[4,8],grids:[1,2,3,0],arena:.3,arenaMax:5,diag:.3,slope:.15,rise:.5,hill:.95,bowl:.5,sand:.1,water:.06,bridge:0,pillar:.1})},
+ {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{len:[5,9],grids:[0,3,2,3],arena:.12,arenaMax:2,diag:.15,slope:.9,rise:.55,hill:.3,bowl:.2,sand:.15,water:.1,bridge:.18,pillar:.06})},
+ {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{len:[8,13],grids:[0,0,3],arena:.1,arenaMax:2,diag:.45,slope:.35,rise:.5,hill:.35,bowl:.2,sand:.5,water:0,bridge:.1,pillar:.3})},
+ {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{len:[6,12],grids:[0,2,3,1],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.65,hill:.6,bowl:.3,sand:.2,water:.3,bridge:.3,pillar:.15})}
 ];
 for(const c of COURSES)c.par=c.holes.reduce((s,h)=>s+h.par,0);
 let HOLES=COURSES[0].holes,PAR=COURSES[0].par,CI=0;
@@ -404,6 +483,8 @@ function stepBall(b,h,dt,t){
     for(const s of h.slopes)if(inPoly(s.poly,b.x,b.y)){ax+=s.ax;ay+=s.ay;}
     for(const m of h.hills){const dx=b.x-m.c[0],dy=b.y-m.c[1],dl=Math.hypot(dx,dy);
       if(dl<m.r&&dl>.01){const k=m.k*Math.sin(Math.PI*dl/m.r)/dl;ax+=dx*k;ay+=dy*k;}}
+    {const dx=h.cup[0]-b.x,dy=h.cup[1]-b.y,dl=Math.hypot(dx,dy);   // the lip of the cup: a ball that is nearly there tips in
+      if(dl<CUP+9&&dl>.01){const k=(210+420*(1-Math.max(0,dl-CUP)/9))/dl;ax+=dx*k;ay+=dy*k;}}
     let s=Math.hypot(b.vx,b.vy),rest=false;
     if(s<5&&Math.hypot(ax,ay)<160){b.vx=b.vy=0;rest=true;}     // a gentle slope cannot start a resting ball
     else{
@@ -462,9 +543,9 @@ const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,c
 try{const a=JSON.parse(localStorage.getItem('minigolf.v5')||'null');
   if(a){if(a.n>=1&&a.n<=4)store.n=a.n|0;if(Array.isArray(a.names))a.names.slice(0,4).forEach((v,i)=>{if(typeof v==='string'&&v.trim())store.names[i]=v.slice(0,10);});
     store.snd=a.snd?1:0;if(a.course>=0&&a.course<COURSES.length)store.course=a.course|0;
-    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k]))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
+    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k])&&(k==='0'||a.layout===6))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
 const hsList=ci=>store.hs[ci]||(store.hs[ci]=[]);
-const save=()=>{try{localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
+const save=()=>{try{store.layout=6;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Sound: small synthesised effects, no audio files ----------

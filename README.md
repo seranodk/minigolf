@@ -1,6 +1,6 @@
 # Minigolf
 
-Et minigolfspil til mobil og browser: seks baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.5.
+Et minigolfspil til mobil og browser: seks baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.6.
 
 **Spil:** åbn `index.html`, eller slå GitHub Pages til (Settings → Pages → Branch `main`, mappe `/root`). På mobilen kan siden føjes til hjemmeskærmen og kører så i fuld skærm som en app.
 

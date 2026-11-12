@@ -1,5 +1,16 @@
 # Release-log – Minigolf
 
+## v0.6 – 12. november 2026
+Større variation på de fem lange baner, og bolden triller selv det sidste stykke i hul.
+- Alle 90 huller på de fem lange baner er lavet om. Hvert hul har nu sit eget forløb i stedet for at være en spejlvendt eller omvendt udgave af en fast form
+- Fire slags fairways: smalle og snoede, brede alléer og to mellemting, med skrå genveje og 45-graders hjørner
+- Åbne huller uden fairway: Ottekanten, Sekskanten, Timeglasset, Tragten, Øen og Vulkanen
+- Nyt på de lange baner: damme, broer over vand og pæle, ud over stigninger, fald, runde toppe, skåle og bunkere
+- Banerne har tydeligere særpræg: Engen er kort og åben, Bakkerne har toppe og skåle, Skrænten stigninger og fald, Slugten er smal og snoet med sand og pæle, Bjerget er lang med vand og broer
+- Hullets kant: ligger eller triller bolden helt tæt på hullet, tipper den selv det sidste stykke i
+- Par på de lange baner er strammet og følger hullets længde
+- Highscorelisterne fra v0.5 er uændrede i formatet, men banerne er nye, så gamle tider på de lange baner kan ikke sammenlignes
+
 ## v0.5 – 12. november 2026
 Seks baner med 18 huller hver, i alt 108 huller.
 - Banevælger: vælg bane, før runden starter. Hver bane viser sit par og sin bedste runde
