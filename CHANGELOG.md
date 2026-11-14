@@ -1,5 +1,10 @@
 # Release-log – Minigolf
 
+## v0.11 – 14. november 2026
+Skudbaren er ikke længere sløv i bunden.
+- Det mindste skud har nu fart nok til at rulle cirka 35 px i stedet for at næsten stå stille, og kurven op mod fuld kraft er fladere
+- Tæt på hullet er skuddet stadig blødt, så korte put er lette at styre
+
 ## v0.10 – 14. november 2026
 Kun rigtige lyde, ingen syntetiske.
 - Alle syntetiserede lyde er fjernet. Spillet bruger kun rigtige optagelser: slag, bold i hul, træ- og metalslag og publikum

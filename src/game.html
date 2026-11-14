@@ -182,7 +182,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.10';
+const VERSION='v0.11';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -694,8 +694,8 @@ function toMenu(){
 }
 function shoot(dx,dy,p){
   if(g.state!=='aim')return;
-  // a gentler curve at the low end, and an even softer stroke close to the cup, makes short putts easy to judge
-  hit(dx,dy,MAXV*(.05+.95*Math.pow(p,1.5))*(nearCup()?.45:1));sfx.putt(p);
+  // a gentler curve at the low end (but never a crawl), and an even softer stroke close to the cup, makes short putts easy to judge
+  hit(dx,dy,MAXV*(.15+.85*Math.pow(p,1.4))*(nearCup()?.45:1));sfx.putt(p);
 }
 function hit(dx,dy,v){
   if(g.state!=='aim')return;
