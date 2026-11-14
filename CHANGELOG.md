@@ -1,5 +1,12 @@
 # Release-log – Minigolf
 
+## v0.14 – 14. november 2026
+Fælles highscore, klar til at blive tændt.
+- Når der er sat en database-adresse i src/online.js, sendes scoren til en fælles liste, og highscore-skærmen får en knap, Alle spillere, med de 10 bedste pr. bane
+- Kan scoren ikke sendes, huskes den og sendes næste gang
+- Uden adresse er alt som før: highscoren ligger kun på enheden
+- Serveren er en gratis Firebase Realtime Database. Reglerne ligger i firebase-rules.json, og opsætningen står i README
+
 ## v0.13 – 14. november 2026
 20 baner, brugernavn på highscoren og mere liv på banen.
 - 14 nye baner, så der er 20 faste baner plus Tilfældig bane. Parken, Lysningen, Kystvejen, Dalen, Mosen, Klitterne, Havnen, Højderyggen, Fjorden, Mølleåen, Stenbruddet, Vulkanen, Kæmpen og Mesterskabet. Hver har sit eget præg og sin græsfarve

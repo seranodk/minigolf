@@ -8,6 +8,8 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 src = open(os.path.join(ROOT, 'src/game.html'), encoding='utf-8').read()
 SND = open(os.path.join(ROOT, 'src/snd.js'), encoding='utf-8').read()
 src = src.replace('<script>/*SND*/</script>', '<script>' + SND + '</script>', 1)   # the recordings live in src/snd.js and are inlined: one self-contained page
+ONL = open(os.path.join(ROOT, 'src/online.js'), encoding='utf-8').read()
+src = src.replace('<script>/*ONLINE*/</script>', '<script>' + ONL + '</script>', 1)   # the address of the shared highscore
 VERSION = re.search(r"VERSION='(v[0-9.]+)'", src).group(1)  # single source: the game's VERSION constant
 src = re.sub(r'<title>.*?</title>', f'<title>{NAME} {VERSION}</title>', src, count=1)
 

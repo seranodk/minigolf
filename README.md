@@ -1,6 +1,6 @@
 # Minigolf
 
-Et minigolfspil til mobil og browser: 20 baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.13. Plus en tilfældig bane med banekode.
+Et minigolfspil til mobil og browser: 20 baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.14. Plus en tilfældig bane med banekode.
 
 **Spil:** åbn `index.html`, eller slå GitHub Pages til (Settings → Pages → Branch `main`, mappe `/root`). På mobilen kan siden føjes til hjemmeskærmen og kører så i fuld skærm som en app.
 
@@ -41,3 +41,13 @@ Kun rigtige optagelser, lagt som base64 MP3 i `src/snd.js` og bygget ind i siden
 - Træ- og metalslag: Kenney, CC0
 - Publikum: WebbFilmsUK, CC BY 4.0
 - Køllen mod bolden og bolden i hul: kilde og licens skal bekræftes
+
+## Fælles highscore
+Uden opsætning ligger highscoren kun på den enhed, man spiller på. Sådan tænder du en fælles liste, gratis og uden egen server:
+1. Gå til https://console.firebase.google.com og opret et projekt (Google Analytics kan slås fra)
+2. Vælg Build, Realtime Database, Create database, og vælg en region i Europa
+3. Under fanen Rules indsætter du indholdet af `firebase-rules.json` og trykker Publish
+4. Kopiér databasens adresse øverst på fanen Data, fx `https://minigolf-xxxxx-default-rtdb.europe-west1.firebasedatabase.app`
+5. Sæt adressen ind i `src/online.js`, kør `python3 build.py` og push
+
+Reglerne gør, at alle kan læse listen og tilføje en score, men ingen kan ændre eller slette en eksisterende. Navnet må være 1–12 tegn, og totalen skal ligge mellem 18 og 144. Der er ingen login, så en snyder kan stadig sende en falsk score, der opfylder reglerne.

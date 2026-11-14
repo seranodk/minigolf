@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "scores": {
+      "$course": {
+        ".read": true,
+        ".indexOn": ["t"],
+        "$id": {
+          ".write": "!data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['n','t','d']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 12 && newData.child('t').isNumber() && newData.child('t').val() >= 18 && newData.child('t').val() <= 144 && newData.child('d').isNumber()",
+          "n": {".validate": true},
+          "t": {".validate": true},
+          "d": {".validate": true},
+          "v": {".validate": "newData.isString() && newData.val().length <= 12"},
+          "$other": {".validate": false}
+        }
+      }
+    }
+  }
+}
