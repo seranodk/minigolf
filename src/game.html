@@ -182,7 +182,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.11';
+const VERSION='v0.12';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -416,6 +416,14 @@ function reachable(h){
       const x=nx*C+3,y=ny*C+3;if(inPoly(h.out,x,y)&&!inAny(h.blocks,x,y)&&!inAny(h.water,x,y))q.push(k);}}
   return false;
 }
+// A rough measure of how hard a hole is: length, slopes, tops, sand, water, posts and above all anything that moves.
+function diff(h){
+  const len=h.len||Math.hypot(h.cup[0]-h.tee[0],h.cup[1]-h.tee[1]);
+  return len/160+(h.slopes||[]).length*.7+(h.hills||[]).filter(q=>q.k>0).length*.5+(h.hills||[]).filter(q=>q.k<0).length*.3+(h.sand||[]).length*.45+
+    (h.water||[]).length*.5+(h.blocks||[]).length*.5+(h.movers||[]).length*1.6+(h.bridges||[]).length*.6+(h.pipes||[]).length*.4+(h.par>=4?.5:0);
+}
+const avgDiff=c=>c.holes.length?c.holes.reduce((n,h)=>n+diff(h),0)/c.holes.length:0;
+const stars=c=>{const m=avgDiff(c);return m<3.5?1:m<4.2?2:m<4.9?3:m<6.1?4:5;};
 function genCourse(seed,mix){
   const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   const holes=[];let arenas=0;
@@ -425,7 +433,11 @@ function genCourse(seed,mix){
     if(open)arenas++;
     holes.push(h);
   }
-  holes.sort((a,b)=>a.par-b.par||a.len-b.len);        // short and easy first
+  // The holes are ranked by how hard they are, then laid out in a rhythm instead of a straight climb: a gentle start,
+  // a hard hole early, a breather, a peak before the end, and a finale that is hard but not the hardest.
+  holes.sort((a,b)=>diff(a)-diff(b));
+  const RHYTHM=[0,2,5,9,3,12,7,15,1,10,6,16,4,13,8,17,11,14];
+  const laid=RHYTHM.map(r=>holes[r]);holes.length=0;holes.push(...laid);
   const seen={};        // a name is used once per course: fall back on names for the shape, then on a number
   for(const h of holes){const base=h.name;for(const a of h.alts||[]){if(!seen[h.name])break;h.name=a;}
     if(seen[h.name]){h.name=base;let n=2;while(seen[base+' '+n])n++;h.name=base+' '+n;}seen[h.name]=1;}
@@ -438,7 +450,7 @@ const STY={
   S:{name:'Snoet',mix:{len:[8,13],grids:[0,0,3],arena:.05,arenaMax:1,diag:.45,slope:.3,rise:.5,hill:.3,bowl:.2,sand:.4,water:0,bridge:.15,pillar:.3,gate:.3}},
   A:{name:'Åben',mix:{len:[3,6],grids:[1,1,2],arena:.55,arenaMax:9,diag:.3,slope:.3,rise:.5,hill:.6,bowl:.3,sand:.3,water:.3,bridge:.1,pillar:.3,gate:.1}},
   V:{name:'Vand',mix:{len:[4,9],grids:[1,1,2,0],arena:.2,arenaMax:3,diag:.3,slope:.3,rise:.5,hill:.3,bowl:.2,sand:.15,water:.55,bridge:.5,pillar:.1,gate:.15}},
-  H:{name:'Hård',mix:{len:[6,12],grids:[0,0,3,2],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.6,hill:.5,bowl:.2,sand:.4,water:.3,bridge:.3,pillar:.35,gate:.6}}
+  H:{name:'Hård',mix:{len:[9,14],grids:[0,0,3,2],arena:.1,arenaMax:2,diag:.5,slope:.7,rise:.6,hill:.5,bowl:.15,sand:.55,water:.35,bridge:.35,pillar:.5,gate:.85}}
 };
 const GRASS=['#7cc36b','#8fcf6c','#9ccb62','#7fbf7a','#a6c66a','#86b78c'];
 const codeOK=c=>/^[MBSAVH][0-9]{6}$/.test(c);
@@ -450,7 +462,7 @@ function buildRandom(code){
 const COURSES=[
  {name:'Klassikeren',grass:'#7cc36b',holes:CLASSIC},
  {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{len:[3,6],grids:[1,1,2,3],arena:.3,arenaMax:5,diag:.3,slope:.3,rise:.5,hill:.45,bowl:.2,sand:.28,water:.2,bridge:.1,pillar:.15,gate:.25})},
- {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{len:[4,8],grids:[1,2,3,0],arena:.3,arenaMax:5,diag:.3,slope:.2,rise:.5,hill:.95,bowl:.35,sand:.2,water:.15,bridge:.05,pillar:.2,gate:.2})},
+ {name:'Bakkerne',grass:'#9ccb62',holes:genCourse(23,{len:[4,8],grids:[1,2,3,0],arena:.3,arenaMax:5,diag:.3,slope:.1,rise:.5,hill:.95,bowl:.35,sand:.1,water:.06,bridge:.03,pillar:.08,gate:.08})},
  {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{len:[5,9],grids:[0,3,2,3],arena:.12,arenaMax:2,diag:.2,slope:.9,rise:.55,hill:.3,bowl:.15,sand:.25,water:.2,bridge:.2,pillar:.15,gate:.25})},
  {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{len:[8,13],grids:[0,0,3],arena:.1,arenaMax:2,diag:.45,slope:.4,rise:.5,hill:.35,bowl:.15,sand:.5,water:0,bridge:.2,pillar:.4,gate:.5})},
  {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{len:[6,12],grids:[0,2,3,1],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.65,hill:.6,bowl:.2,sand:.3,water:.3,bridge:.3,pillar:.3,gate:.45})},
@@ -575,10 +587,10 @@ const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,c
 try{const a=JSON.parse(localStorage.getItem('minigolf.v5')||'null');
   if(a){if(a.n>=1&&a.n<=4)store.n=a.n|0;if(Array.isArray(a.names))a.names.slice(0,4).forEach((v,i)=>{if(typeof v==='string'&&v.trim())store.names[i]=v.slice(0,10);});
     store.snd=a.snd?1:0;if(a.course>=0&&a.course<COURSES.length)store.course=a.course|0;if(typeof a.rc==='string'&&codeOK(a.rc)){store.rc=a.rc;store.rs=a.rc[0];}
-    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k])&&(k==='0'||a.layout===7))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
+    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k])&&(k==='0'||a.layout===8))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
 if(!codeOK(store.rc))store.rc=newCode(store.rs);
 const hsList=ci=>store.hs[ci]||(store.hs[ci]=[]);
-const save=()=>{try{store.layout=7;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
+const save=()=>{try{store.layout=8;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Sound: small synthesised effects, no audio files ----------
@@ -732,7 +744,7 @@ function showHs(){
 function syncSnd(){document.querySelectorAll('.snd').forEach(b=>b.textContent='Lyd: '+(store.snd?'til':'fra'));}
 function setupRows(){
   if(COURSES[RND].code!==store.rc)buildRandom(store.rc);
-  $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=c.rnd?null:hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>par '+c.par+(c.rnd?' · '+c.code:b?' · bedst '+b.total:'')+'</small></button>';}).join('');
+  $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=c.rnd?null:hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>'+'★'.repeat(stars(c))+'☆'.repeat(5-stars(c))+' · par '+c.par+(c.rnd?' · '+c.code:b?' · bedst '+b.total:'')+'</small></button>';}).join('');
   $('#rnd').hidden=store.course!==RND;
   $('#segSty').innerHTML=Object.keys(STY).map(k=>'<button data-v="'+k+'" class="'+(k===store.rs?'on':'')+'">'+STY[k].name+'</button>').join('');
   $('#rCode').value=store.rc;
@@ -1284,7 +1296,7 @@ document.title='Minigolf '+VERSION;
 setCourse(store.course);resize();toMenu();requestAnimationFrame(frame);
 
 // Debug/test handle: lets a test simulate shots without touching the game state.
-window.MG={VERSION,get HOLES(){return HOLES;},COURSES,setCourse,g,cam,store,stepBall,MAXV,shoot,hit,startRound,startHole,
+window.MG={diff,avgDiff,stars,VERSION,get HOLES(){return HOLES;},COURSES,setCourse,g,cam,store,stepBall,MAXV,shoot,hit,startRound,startHole,
   sim(hole,x,y,ang,p,t0){const v=MAXV*(.12+.88*p),b={x,y,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v},h=HOLES[hole];let r='roll',n=0,t=t0||0;
     while(r==='roll'&&n++<3000){r=stepBall(b,h,1/60,t);t+=1/60;
       if(r==='pipe'){const q=b.pipe,s=pipeSpeed(Math.hypot(b.vx,b.vy));b.x=q.b[0];b.y=q.b[1];b.vx=Math.cos(q.dir)*s;b.vy=Math.sin(q.dir)*s;r='roll';}}

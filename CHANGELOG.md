@@ -1,5 +1,13 @@
 # Release-log – Minigolf
 
+## v0.12 – 14. november 2026
+Mere niveauforskel: banerne er ikke længere en lige stigning fra let til svær.
+- Hvert hul får en sværhedsværdi ud fra længde, stigninger, toppe, bunkere, vand, pæle og især alt, der bevæger sig
+- Hullerne på de genererede baner lægges i en rytme: blød start, et hårdt hul tidligt, et pusterum, en top før slutningen og et finalehul, der er hårdt men ikke det hårdeste
+- Hver bane har fået stjerner i banevælgeren: Engen 1, Bakkerne 2, Klassikeren og Skrænten 3, Bjerget 4 og Slugten 5. Tilfældige baner får stjerner efter stil
+- Bakkerne er gjort lidt lettere og stilen Hård tydeligt sværere (længere, flere porte, bunkere, vand og pæle), så der er et rigtigt spring mellem trinene
+- Highscorelisterne på de genererede baner er nulstillet, fordi hullernes rækkefølge er ændret
+
 ## v0.11 – 14. november 2026
 Skudbaren er ikke længere sløv i bunden.
 - Det mindste skud har nu fart nok til at rulle cirka 35 px i stedet for at næsten stå stille, og kurven op mod fuld kraft er fladere
