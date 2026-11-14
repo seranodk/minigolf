@@ -1,5 +1,10 @@
 # Release-log – Minigolf
 
+## v0.9 – 14. november 2026
+Bedre klapsalver.
+- Klapsalven er bygget om: et blødt rumlag af tæt klapren, og oven i det enkelte hænder i små grupper med hver deres tonehøjde og efterklang
+- Længere og tættere applaus ved hul i ét, eagle og birdie, med flere stemmer og fløjt ved hul i ét
+
 ## v0.8 – 14. november 2026
 Bedre lyde, lettere vindmøller, rækværk på broer og bolden triller i vandet.
 - Nye lyde, alle syntetiserede i spillet (ingen lydfiler): slag med køllens klik og bolden, bolden der falder i koppen og rasler rundt, plask med sprøjt og bobler
