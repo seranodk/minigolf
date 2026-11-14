@@ -1,5 +1,10 @@
 # Release-log – Minigolf
 
+## v0.16 – 14. november 2026
+Lydikon og kortere træk.
+- Lydknappen er væk fra startmenuen og pausemenuen. I stedet er der et lille højttalerikon øverst til højre på alle skærme, som skifter mellem lyd og mute
+- Trækket for skudstyrke er 60 % så langt (130 px blev til 78 px), men giver den samme fart. Det kræver lidt mere præcision, til gengæld kommer man sjældnere ud over skærmkanten
+
 ## v0.15 – 14. november 2026
 Hurtigt spil og Flere spillere.
 - Hurtigt spil: man vælger kun bane, og så går det i gang med det samme med én spiller. Tilfældig bane åbner sin stil og kode først, og har en Start-knap

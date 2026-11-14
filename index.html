@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Minigolf">
-<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.15)">
+<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.16)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Minigolf v0.15</title>
+<title>Minigolf v0.16</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -37,6 +37,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .chip{background:rgba(8,28,22,.82);color:#fff;border-radius:12px;padding:6px 11px;font-weight:600;font-size:15px;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
 .chip small{display:block;font-weight:500;font-size:11px;color:#b9d6c6;letter-spacing:.02em}
 #hud .sp{flex:1}
+#hud{padding-right:calc(max(10px,var(--sr)) + 48px)}
+#bSnd{position:absolute;z-index:50;top:calc(var(--st) + 8px);right:max(10px,var(--sr))}
 .ib{pointer-events:auto;width:40px;height:40px;border-radius:12px;background:rgba(8,28,22,.82);color:#fff;font-size:18px;display:grid;place-items:center;padding:0}
 .ib svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 
@@ -103,6 +105,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
     <button class="ib" id="bPause" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
     <button class="ib" id="bFs" aria-label="Fuld skærm"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </div>
+  <button class="ib snd" id="bSnd" aria-label="Lyd"></button>
   <div id="toast"></div>
 
   <div class="screen" id="sStart">
@@ -114,7 +117,6 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
       <button class="btn alt" id="bMulti">Flere spillere</button>
       <button class="btn alt" id="bHs">Highscore</button>
       <button class="btn alt" id="bHow">Sådan spiller du</button>
-      <button class="btn alt snd" id="bSnd">Lyd: til</button>
     </div>
   </div>
 
@@ -204,7 +206,6 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
       <h2>Pause</h2>
       <button class="btn" id="bResume">Fortsæt</button>
       <button class="btn alt" id="bRetry">Start hullet forfra</button>
-      <button class="btn alt snd" id="bSnd2">Lyd: til</button>
       <button class="btn alt" id="bQuit">Til menuen</button>
     </div>
   </div>
@@ -221,13 +222,13 @@ window.ONLINE={url:''};
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.15';
+const VERSION='v0.16';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
 // ---------- Course data (logical field 360 x 600, tee at the bottom) ----------
 // WH: how tall walls look on screen. Walls are drawn as boxes seen slightly from the south.
-const FW=360,FH=600,R=6.5,CUP=10.5,MAXV=820,MAXS=8,PULL=130,WH=9,TAU=6.2832;
+const FW=360,FH=600,R=6.5,CUP=10.5,MAXV=820,MAXS=8,PULL=78,WH=9,TAU=6.2832;
 const rect=(x,y,w,h)=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
 const ell=(cx,cy,rx,ry,n=20)=>Array.from({length:n},(_,i)=>[cx+rx*Math.cos(i/n*TAU),cy+ry*Math.sin(i/n*TAU)]);
 // Per hole: out = outline of the green, blocks = solid boxes, sand/water = polygons,
@@ -844,7 +845,9 @@ function showHs(){
   }
   only('#sHs');
 }
-function syncSnd(){document.querySelectorAll('.snd').forEach(b=>b.textContent='Lyd: '+(store.snd?'til':'fra'));}
+const ICO_ON='<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+ICO_OFF='<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
+function syncSnd(){document.querySelectorAll('.snd').forEach(b=>{b.innerHTML=store.snd?ICO_ON:ICO_OFF;b.setAttribute('aria-label',store.snd?'Lyd til':'Lyd fra');});}
 function setupRows(){
   if(COURSES[RND].code!==store.rc)buildRandom(store.rc);
   $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=c.rnd?null:hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>'+'★'.repeat(stars(c))+'☆'.repeat(5-stars(c))+' · par '+c.par+(c.rnd?' · '+c.code:b?' · bedst '+b.total:'')+'</small></button>';}).join('');
@@ -1339,8 +1342,8 @@ function draw(){
 const app=$('#app');
 function setDrag(e){
   const lx=(e.clientX-drag.sx)/view.s,ly=(e.clientY-drag.sy)/view.s,len=Math.hypot(lx,ly);
-  if(len<10){drag.p=0;return;}
-  drag.moved=true;drag.dx=-lx/len;drag.dy=-ly/len;drag.p=Math.min(1,(len-10)/PULL);
+  if(len<6){drag.p=0;return;}
+  drag.moved=true;drag.dx=-lx/len;drag.dy=-ly/len;drag.p=Math.min(1,(len-6)/PULL);
 }
 cv.addEventListener('pointerdown',e=>{
   if(g.state!=='aim'||g.paused||drag||g.intro>0)return;
@@ -1394,6 +1397,7 @@ $('#bRetry').onclick=()=>{show('#sPause',false);startHole(g.hole);};
 $('#bQuit').onclick=toMenu;
 $('#bFs').onclick=fullscreen;
 document.querySelectorAll('.snd').forEach(b=>b.onclick=()=>{store.snd=store.snd?0:1;save();syncSnd();sfx.click();});
+syncSnd();
 document.addEventListener('pointerdown',e=>{sfx.unlock();if(e.target.closest('button'))sfx.click();},true);
 for(const ev of ['pointerup','touchend','click'])document.addEventListener(ev,()=>sfx.unlock(),true);   // iOS only lets sound start from these
 addEventListener('keydown',e=>{
