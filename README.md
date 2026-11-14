@@ -1,6 +1,6 @@
 # Minigolf
 
-Et minigolfspil til mobil og browser: seks baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.9. Plus en tilfældig bane med banekode.
+Et minigolfspil til mobil og browser: seks baner med 18 huller hver, set ovenfra, hvor man trækker bagud og slipper for at slå. v0.10. Plus en tilfældig bane med banekode.
 
 **Spil:** åbn `index.html`, eller slå GitHub Pages til (Settings → Pages → Branch `main`, mappe `/root`). På mobilen kan siden føjes til hjemmeskærmen og kører så i fuld skærm som en app.
 
@@ -35,3 +35,9 @@ Kilden ligger i `src/game.html`. `python3 build.py` bygger `index.html` (GitHub-
 
 ## Versioner
 Hver udgave gemmes som `versions/minigolf-vX.Y.html`, og versionen står i titlen og på startskærmen.
+
+## Lyde
+Kun rigtige optagelser, lagt som base64 MP3 i `src/snd.js` og bygget ind i siden af `build.py`.
+- Træ- og metalslag: Kenney, CC0
+- Publikum: WebbFilmsUK, CC BY 4.0
+- Køllen mod bolden og bolden i hul: kilde og licens skal bekræftes

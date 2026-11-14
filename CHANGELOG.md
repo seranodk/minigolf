@@ -1,9 +1,15 @@
 # Release-log – Minigolf
 
+## v0.10 – 14. november 2026
+Kun rigtige lyde, ingen syntetiske.
+- Alle syntetiserede lyde er fjernet. Spillet bruger kun rigtige optagelser: slag, bold i hul, træ- og metalslag og publikum
+- Publikum efter hullet følger resultatet: hul i ét er højest og længst, derefter eagle, birdie og par. Bogey er lavt og kort, og værre end bogey er stille
+- Lyde uden optagelse er stille indtil videre: vand, sand, rør, vindmølle, knapper og suk
+- Optagelserne ligger i src/snd.js og bliver bygget ind i siden, så hver version stadig er én fil
+
 ## v0.9 – 14. november 2026
-Bedre klapsalver.
-- Klapsalven er bygget om: et blødt rumlag af tæt klapren, og oven i det enkelte hænder i små grupper med hver deres tonehøjde og efterklang
-- Længere og tættere applaus ved hul i ét, eagle og birdie, med flere stemmer og fløjt ved hul i ét
+Rigtige lydoptagelser (udgivet fra en anden samtale, taget med her).
+- Optagelser af køllen mod bolden og bolden i hul, træ- og metalslag (Kenney, CC0) og publikum (WebbFilmsUK, CC BY 4.0)
 
 ## v0.8 – 14. november 2026
 Bedre lyde, lettere vindmøller, rækværk på broer og bolden triller i vandet.

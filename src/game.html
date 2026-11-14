@@ -177,10 +177,11 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
   </div>
 </div>
 
+<script>/*SND*/</script>
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.9';
+const VERSION='v0.10';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -580,75 +581,36 @@ const save=()=>{try{store.layout=7;localStorage.setItem('minigolf.v5',JSON.strin
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Sound: small synthesised effects, no audio files ----------
+// ---------- Sound: real recordings only (src/snd.js holds them as base64 MP3). Where there is no recording, the game stays quiet. ----------
 const sfx=(()=>{
-  let ac=null,out=null,nb=null;
+  let ac=null,out=null,bufs=null;const REAL=window.SND||{},lastP={};
   function A(){
     if(!store.snd)return null;
-    if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=.5;out.connect(ac.destination);}catch(e){ac=null;return null;}}
+    if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=.8;out.connect(ac.destination);}catch(e){ac=null;return null;}load(ac);}
     if(ac.state==='suspended'){try{ac.resume();}catch(e){}}
     return ac;
   }
-  function tone(f0,f1,dur,type,vol,delay){
-    const a=A();if(!a)return;const t=a.currentTime+(delay||0),o=a.createOscillator(),g=a.createGain();
-    o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);
-    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g);g.connect(out);o.start(t);o.stop(t+dur+.03);
-  }
-  function noise(dur,vol,f0,f1,q,type,delay){
-    const a=A();if(!a)return;
-    if(!nb){nb=a.createBuffer(1,a.sampleRate,a.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
-    const t=a.currentTime+(delay||0),s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();
-    s.buffer=nb;f.type=type||'bandpass';f.Q.value=q||1;f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(f1,t+dur);
-    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f);f.connect(g);g.connect(out);s.start(t,Math.random()*.5,dur+.05);
-  }
-  function voice(f0,f1,dur,vol,delay,form){   // a crowd voice: a sawtooth with a little vibrato through a vowel-like filter
-    const a=A();if(!a)return;const t=a.currentTime+(delay||0),o=a.createOscillator(),f=a.createBiquadFilter(),g=a.createGain(),lf=a.createOscillator(),lg=a.createGain();
-    o.type='sawtooth';o.frequency.setValueAtTime(f0,t);o.frequency.linearRampToValueAtTime(f1,t+dur);
-    lf.frequency.value=5.5;lg.gain.value=f0*.02;lf.connect(lg);lg.connect(o.frequency);
-    f.type='bandpass';f.frequency.value=form||850;f.Q.value=3;
-    g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+dur*.25);g.gain.exponentialRampToValueAtTime(.001,t+dur);
-    o.connect(f);f.connect(g);g.connect(out);o.start(t);lf.start(t);o.stop(t+dur+.05);lf.stop(t+dur+.05);
-  }
-  // Applause: a soft room bed of dense clapping, plus single hands in little clusters, each with its own pitch and decay
-  let lb=null;
-  function bed(dur,vol,delay,lo,hi){
-    const a=A();if(!a)return;
-    if(!lb){lb=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=lb.getChannelData(0);let p=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;p=p*.55+w*.45;d[i]=p*(.4+.6*Math.abs(Math.sin(i/a.sampleRate*47)))*(Math.random()<.002?3:1);}}
-    const t=a.currentTime+(delay||0),sr=a.createBufferSource(),f=a.createBiquadFilter(),h=a.createBiquadFilter(),g=a.createGain();
-    sr.buffer=lb;sr.loop=true;f.type='lowpass';f.frequency.value=hi||4200;h.type='highpass';h.frequency.value=lo||900;
-    g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+dur*.3);g.gain.setValueAtTime(vol,t+dur*.55);g.gain.exponentialRampToValueAtTime(.001,t+dur);
-    sr.connect(h);h.connect(f);f.connect(g);g.connect(out);sr.start(t,Math.random());sr.stop(t+dur+.05);
-  }
-  function claps(dur,n,vol,delay){
-    bed(dur*1.1,vol*.22*Math.min(1,n/60),delay,1000,4800);
-    let i=0;
-    while(i<n){const k=Math.random(),sw=Math.pow(Math.sin(Math.PI*Math.min(.98,k)),.7),cl=1+Math.floor(Math.random()*3);   // a few hands clapping together
-      for(let j=0;j<cl&&i<n;j++,i++){const tt=(delay||0)+dur*k+j*(.012+Math.random()*.02),v=vol*(.25+.75*Math.random())*sw*.6,f=1300+Math.random()*2600;
-        noise(.03+Math.random()*.04,v,f,f*.6,1+Math.random()*1.6,'bandpass',tt);
-        if(Math.random()<.35)noise(.05,v*.5,500+Math.random()*300,300,1.2,'bandpass',tt);}}
+  function load(a){if(bufs)return;bufs={};
+    for(const k in REAL){try{const bin=atob(REAL[k]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      const p=a.decodeAudioData(u.buffer,b=>{bufs[k]=b;},()=>{});if(p&&p.catch)p.catch(()=>{});}catch(e){}}}
+  // k: recording, vol, rate (pitch and speed), delay in seconds, dur: play only this long with a soft swell and fade
+  function play(k,vol,rate,delay,dur){
+    const a=A();if(!a||!bufs||!bufs[k])return;
+    const now=a.currentTime;if(now-(lastP[k]===undefined?-1:lastP[k])<.06)return;lastP[k]=now;
+    const t=now+(delay||0),s=a.createBufferSource(),gn=a.createGain();s.buffer=bufs[k];s.playbackRate.value=rate||1;
+    if(dur){const d=Math.min(dur,s.buffer.duration-.2),o=Math.random()*.1;gn.gain.setValueAtTime(.0001,t);gn.gain.linearRampToValueAtTime(vol,t+Math.min(.5,d*.3));gn.gain.setValueAtTime(vol,t+d*.6);gn.gain.linearRampToValueAtTime(.0001,t+d);s.connect(gn);gn.connect(out);s.start(t,o,d);}
+    else{gn.gain.value=vol;s.connect(gn);gn.connect(out);s.start(t);}
   }
   return {
     unlock(){A();},
-    putt(p){tone(1500,500,.025,'triangle',.22+.3*p);tone(240,120,.07,'sine',.35+.4*p);noise(.012,.3+.35*p,4500,2500,.8,'highpass');},   // club face, then the thud
-    wall(v){const k=Math.min(1,v/500);tone(260+k*120,150,.06,'triangle',.12+.4*k);noise(.025,.1+.3*k,2200,900,.9);},
-    metal(){tone(1250,900,.12,'square',.06);tone(1890,1500,.16,'sine',.09);},
-    sand(){noise(.12,.06,3200,1800,.6,'highpass');},
-    splash(){noise(.3,.35,1200,250,.8,'bandpass');tone(520,130,.14,'sine',.35);noise(.5,.18,3500,1200,.6,'highpass',.02);noise(.4,.08,600,200,.6,'lowpass',.1);
-      for(let i=0;i<6;i++){const d=.12+i*.07+Math.random()*.05,f=350+Math.random()*500;tone(f,f*2.2,.06,'sine',.1,d);}},   // the plop, the spray and a few bubbles
-    cup(){tone(230,110,.1,'sine',.5);noise(.03,.25,3000,1800,1.5,'bandpass',.02);   // the ball drops, rattles round the plastic cup and settles
-      [.09,.17,.23,.28].forEach((d,i)=>{tone(1800-i*150,1500-i*150,.03,'triangle',.12-.02*i,d);noise(.025,.14-.03*i,2800,2000,2,'bandpass',d);});tone(420,380,.35,'sine',.1,.1);},
-    // applause and voices: level 4 hole in one, 3 eagle or better, 2 birdie, 1 par, 0 bogey, -1 worse
-    finish(lv){const d=.4;
-      if(lv>=4){claps(4.6,260,.6,d);voice(420,700,1.2,.09,d+.5,1000);voice(380,640,1.4,.09,d+.9,1200);voice(300,520,1.1,.12,d+.05,900);voice(260,480,1.3,.1,d+.15,1100);voice(340,600,1.0,.1,d+.3,800);tone(1600,2400,.35,'sine',.08,d+.25);}
-      else if(lv===3){claps(3.2,150,.5,d);voice(300,500,1.0,.1,d+.05,900);voice(270,450,1.1,.09,d+.2,1050);}
-      else if(lv===2){claps(2.6,100,.45,d);voice(310,480,.9,.08,d+.1,950);}
-      else if(lv===1)claps(1.8,50,.34,d);
-      else if(lv===0){claps(.9,10,.22,d);voice(330,200,.7,.08,d+.05,700);}
-      else{voice(300,150,1.0,.1,d+.05,650);claps(.5,3,.15,d+.2);}},
-    lose(){voice(300,140,.9,.1,0,650);},
-    pipe(){noise(.6,.25,400,1800,2);},
-    blade(){noise(.12,.03,300,700,1);},
-    click(){tone(660,660,.04,'sine',.1);},
-    turn(){tone(660,880,.1,'sine',.12);}
+    putt(p){play('hit',.5+.6*p,.9+.22*p+(Math.random()-.5)*.05);},
+    wall(v){const k=Math.min(1,v/500);if(k>.03)play('wood',.12+.75*k,.85+.5*k+(Math.random()-.5)*.08);},
+    metal(){play('metal',.3,.95+Math.random()*.12);},
+    cup(){play('drop',.95,1);},
+    // the crowd after a hole: level 4 hole in one, 3 eagle or better, 2 birdie, 1 par, 0 bogey (low and short), -1 worse (silence)
+    finish(lv){if(lv<0)return;play('crowd',lv>=4?.95:lv===3?.8:lv===2?.65:lv===1?.4:.18,lv===0?.8:1,.35,lv>=4?5:lv===3?3.8:lv===2?2.8:lv===1?1.8:1.1);},
+    // no recording yet: water, sand, pipes, windmill, buttons and the lose sigh
+    splash(){},sand(){},pipe(){},blade(){},click(){},turn(){},lose(){}
   };
 })();
 
