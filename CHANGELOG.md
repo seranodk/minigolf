@@ -1,5 +1,11 @@
 # Release-log – Minigolf
 
+## v0.15 – 14. november 2026
+Hurtigt spil og Flere spillere.
+- Hurtigt spil: man vælger kun bane, og så går det i gang med det samme med én spiller. Tilfældig bane åbner sin stil og kode først, og har en Start-knap
+- Flere spillere: vælg bane, vælg 2, 3 eller 4 spillere og skriv navnene
+- Menuen har to knapper: Hurtigt spil og Flere spillere. Spil igen bruger den samme tilstand
+
 ## v0.14 – 14. november 2026
 Fælles highscore, klar til at blive tændt.
 - Når der er sat en database-adresse i src/online.js, sendes scoren til en fælles liste, og highscore-skærmen får en knap, Alle spillere, med de 10 bedste pr. bane
