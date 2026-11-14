@@ -1,5 +1,13 @@
 # Release-log – Minigolf
 
+## v0.8 – 14. november 2026
+Bedre lyde, lettere vindmøller, rækværk på broer og bolden triller i vandet.
+- Nye lyde, alle syntetiserede i spillet (ingen lydfiler): slag med køllens klik og bolden, bolden der falder i koppen og rasler rundt, plask med sprøjt og bobler
+- Klapsalver og tilråb efter niveau: hul i ét (kraftig klapsalve og jubel), eagle eller bedre, birdie, par (høflig applaus), bogey (tynd applaus og et skuffet suk) og værre (suk). Slutskærmen har samme slags klapsalve efter hele runden
+- Vindmøller er lettere: færre og langsommere vinger, og de genererede møller er lidt mindre
+- Broer har sider, som bolden preller af på, så den ikke ryger i vandet fra siden
+- Når bolden rammer vand, triller den lidt videre, bliver blå og synker i stedet for at forsvinde
+
 ## v0.7 – 12. november 2026
 Tilfældig bane, sværere baner og en strammere kant på hullet.
 - Ny bane nr. 7: Tilfældig bane. Spillet laver 18 helt nye huller, hver gang du trykker Ny bane (ca. 16 ms)
