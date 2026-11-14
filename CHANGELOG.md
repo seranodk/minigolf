@@ -1,5 +1,16 @@
 # Release-log – Minigolf
 
+## v0.13 – 14. november 2026
+20 baner, brugernavn på highscoren og mere liv på banen.
+- 14 nye baner, så der er 20 faste baner plus Tilfældig bane. Parken, Lysningen, Kystvejen, Dalen, Mosen, Klitterne, Havnen, Højderyggen, Fjorden, Mølleåen, Stenbruddet, Vulkanen, Kæmpen og Mesterskabet. Hver har sit eget præg og sin græsfarve
+- Banerne står i banevælgeren fra let til svær, med 1–5 stjerner. Listen kan rulles
+- Når runden er slut, vælger man et brugernavn (hver spiller sit), og så kommer scoren på banens highscore. Navnet huskes til næste gang. Man kan springe over
+- Highscorelisterne gemmes nu pr. banenavn, og de gamle lister er flyttet med
+- Et kamerasving fra hullet tilbage til udslaget ved start af hvert hul
+- Sommerfugle og fugle, der flyver henover banen
+- Bolden hopper på kanten af hullet, inden den falder i
+- Tilfældig bane har stadig ingen highscore
+
 ## v0.12 – 14. november 2026
 Mere niveauforskel: banerne er ikke længere en lige stigning fra let til svær.
 - Hvert hul får en sværhedsværdi ud fra længde, stigninger, toppe, bunkere, vand, pæle og især alt, der bevæger sig

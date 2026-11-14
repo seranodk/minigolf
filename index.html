@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Minigolf">
-<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.12)">
+<meta name="description" content="Minigolf – Minigolf til mobil og browser (v0.13)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Minigolf v0.12</title>
+<title>Minigolf v0.13</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -65,6 +65,9 @@ table.sc{width:100%;border-collapse:collapse;margin:12px 0 4px;font-variant-nume
 .seg{display:flex;gap:6px;margin-top:8px}
 .seg button{flex:1;padding:11px 4px;border-radius:12px;background:#e7ddc8;font-size:17px;font-weight:700;color:var(--ink)}
 .seg button.on{background:var(--green);color:#fff}
+.seg.hsx{flex-wrap:wrap}.seg.hsx button{flex:0 0 calc(20% - 5px);padding:8px 0;font-size:15px}
+.prow input.bad{outline:2px solid #d0452c}
+#eName{margin-top:6px}#eName .btn{margin-top:8px}
 .seg.sty{flex-wrap:wrap}.seg.sty button{flex:1 0 30%;padding:9px 4px;font-size:15px}
 .prow{display:flex;align-items:center;gap:10px;margin-top:8px}
 .prow input{flex:1;min-width:0;font-family:var(--f);font-size:17px;font-weight:600;color:var(--ink);padding:10px 12px;border-radius:12px;border:2px solid #d8cdb4;background:#fff}
@@ -80,7 +83,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
 .card.wide{width:min(400px,100%);padding-left:14px;padding-right:14px}
 .sc th,.sc td{font-size:13px;padding:5px 0}
 .sc td:first-child{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;max-height:36vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
 .cgrid button{padding:9px 6px;border-radius:12px;background:#e7ddc8;color:var(--ink);text-align:left;line-height:1.2}
 .cgrid button b{display:block;font-size:15px;font-weight:700}
 .cgrid button small{display:block;font-size:12px;font-weight:500;color:var(--dim)}
@@ -133,7 +136,7 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
   <div class="screen" id="sHs" hidden>
     <div class="card">
       <h2>Highscore</h2>
-      <div class="seg" id="segHs"></div>
+      <div class="seg hsx" id="segHs"></div>
       <p id="hsNote"></p>
       <table class="hs" id="hsTable"></table>
       <button class="btn" id="bHsBack">Tilbage</button>
@@ -179,7 +182,14 @@ table.hs{width:100%;border-collapse:collapse;margin:10px 0 4px;font-variant-nume
       <div class="big" id="eTotal">24</div>
       <p id="eSub"></p>
       <div id="eCard"></div>
+      <div id="eName" hidden>
+        <p id="eNameNote"></p>
+        <div id="eInputs"></div>
+        <button class="btn" id="bSave">Gem på highscoren</button>
+        <button class="btn alt" id="bSkip">Spring over</button>
+      </div>
       <button class="btn" id="bAgain">Spil igen</button>
+      <button class="btn alt" id="bSeeHs" hidden>Se highscoren</button>
       <button class="btn alt" id="bMenu">Til menuen</button>
     </div>
   </div>
@@ -201,7 +211,7 @@ window.SND={"hit": "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA
 <script>
 (()=>{
 'use strict';
-const VERSION='v0.12';
+const VERSION='v0.13';
 const $=s=>document.querySelector(s);
 const cv=$('#cv');let ctx=cv.getContext('2d');
 
@@ -442,7 +452,7 @@ function diff(h){
     (h.water||[]).length*.5+(h.blocks||[]).length*.5+(h.movers||[]).length*1.6+(h.bridges||[]).length*.6+(h.pipes||[]).length*.4+(h.par>=4?.5:0);
 }
 const avgDiff=c=>c.holes.length?c.holes.reduce((n,h)=>n+diff(h),0)/c.holes.length:0;
-const stars=c=>{const m=avgDiff(c);return m<3.5?1:m<4.2?2:m<4.9?3:m<6.1?4:5;};
+const stars=c=>{const m=avgDiff(c);return m<3.45?1:m<4.3?2:m<5.2?3:m<6.5?4:5;};
 function genCourse(seed,mix){
   const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   const holes=[];let arenas=0;
@@ -478,6 +488,8 @@ function buildRandom(code){
   const c=COURSES[RND],seed=parseInt(code.slice(1),10);
   c.holes=genCourse((seed*2654435761)>>>0,STY[code[0]].mix);c.par=c.holes.reduce((n,h)=>n+h.par,0);c.grass=GRASS[seed%GRASS.length];c.code=code;
 }
+const BASE={len:[4,8],grids:[1,2,3,0],arena:.2,arenaMax:3,diag:.3,slope:.3,rise:.5,hill:.5,bowl:.25,sand:.2,water:.15,bridge:.15,pillar:.15,gate:.2};
+const mk=(name,grass,seed,o)=>({name,grass,holes:genCourse(seed,Object.assign({},BASE,o))});
 const COURSES=[
  {name:'Klassikeren',grass:'#7cc36b',holes:CLASSIC},
  {name:'Engen',grass:'#8fcf6c',holes:genCourse(11,{len:[3,6],grids:[1,1,2,3],arena:.3,arenaMax:5,diag:.3,slope:.3,rise:.5,hill:.45,bowl:.2,sand:.28,water:.2,bridge:.1,pillar:.15,gate:.25})},
@@ -485,8 +497,23 @@ const COURSES=[
  {name:'Skrænten',grass:'#7fbf7a',holes:genCourse(37,{len:[5,9],grids:[0,3,2,3],arena:.12,arenaMax:2,diag:.2,slope:.9,rise:.55,hill:.3,bowl:.15,sand:.25,water:.2,bridge:.2,pillar:.15,gate:.25})},
  {name:'Slugten',grass:'#a6c66a',holes:genCourse(41,{len:[8,13],grids:[0,0,3],arena:.1,arenaMax:2,diag:.45,slope:.4,rise:.5,hill:.35,bowl:.15,sand:.5,water:0,bridge:.2,pillar:.4,gate:.5})},
  {name:'Bjerget',grass:'#86b78c',holes:genCourse(59,{len:[6,12],grids:[0,2,3,1],arena:.15,arenaMax:3,diag:.5,slope:.6,rise:.65,hill:.6,bowl:.2,sand:.3,water:.3,bridge:.3,pillar:.3,gate:.45})},
- {name:'Tilfældig bane',grass:'#7cc36b',holes:[],rnd:true,par:0,code:''}
+ mk('Parken','#97d27a',71,{len:[3,5],grids:[1,1,2],arena:.4,arenaMax:6,diag:.2,slope:.15,hill:.4,bowl:.2,sand:.12,water:.06,bridge:.05,pillar:.06,gate:.05}),
+ mk('Lysningen','#a8d68a',83,{len:[3,5],grids:[1,2],arena:.5,arenaMax:7,slope:.1,hill:.5,bowl:.3,sand:.1,water:.1,bridge:.05,pillar:.05,gate:.05}),
+ mk('Kystvejen','#b5d17a',97,{len:[4,7],water:.3,bridge:.35,sand:.12,pillar:.08,gate:.1,slope:.15}),
+ mk('Dalen','#8cc59a',103,{len:[4,7],bowl:.8,hill:.4,slope:.2,sand:.12,water:.06,gate:.08}),
+ mk('Mosen','#7bb58a',127,{len:[5,9],water:.5,bridge:.4,sand:.15,gate:.15,pillar:.12}),
+ mk('Klitterne','#d4cf86',131,{len:[5,9],sand:.6,hill:.7,bowl:.3,water:.05,gate:.15,pillar:.1}),
+ mk('Havnen','#8fb9a8',137,{len:[5,9],water:.35,bridge:.5,pillar:.3,gate:.3,slope:.25}),
+ mk('Højderyggen','#9bbf70',149,{len:[7,11],slope:.8,hill:.8,bowl:.3,sand:.25,water:.2,pillar:.2,gate:.35}),
+ mk('Fjorden','#6fae9c',151,{len:[7,11],water:.6,bridge:.6,sand:.25,pillar:.25,gate:.4,slope:.4}),
+ mk('Mølleåen','#86bf6a',163,{len:[6,10],gate:.8,sand:.3,water:.25,bridge:.3,pillar:.3,slope:.3}),
+ mk('Stenbruddet','#b3b79a',173,{len:[7,11],pillar:.65,sand:.4,gate:.4,slope:.4,hill:.4,water:.1}),
+ mk('Vulkanen','#a1bc6c',181,{len:[9,14],hill:.9,slope:.9,sand:.5,water:.3,pillar:.45,gate:.7,bowl:.2}),
+ mk('Kæmpen','#78b080',191,{len:[10,14],grids:[0,0,3],diag:.5,gate:.8,sand:.5,water:.3,pillar:.5,slope:.6}),
+ mk('Mesterskabet','#6fa87a',199,{len:[10,15],grids:[0,0,3,2],diag:.5,gate:.9,sand:.6,water:.4,bridge:.4,pillar:.55,slope:.7})
 ];
+COURSES.sort((a,b)=>avgDiff(a)-avgDiff(b));   // easiest first, so the list reads as a climb
+COURSES.push({name:'Tilfældig bane',grass:'#7cc36b',holes:[],rnd:true,par:0,code:''});
 const RND=COURSES.length-1;
 for(const c of COURSES.slice(0,RND))c.par=c.holes.reduce((s,h)=>s+h.par,0);
 let HOLES=COURSES[0].holes,PAR=COURSES[0].par,CI=0;
@@ -602,14 +629,15 @@ const pipeSpeed=s=>Math.max(240,Math.min(460,s*.75));
 
 // ---------- Saved data: players, sound setting and the highscore list (kept on this device) ----------
 const COLS=[{m:'#f3f2ea',d:'#b3bbc2',c:'#ffffff'},{m:'#ffd84d',d:'#c79a1a',c:'#ffd84d'},{m:'#ff8fa8',d:'#c4506b',c:'#ff8fa8'},{m:'#8fd3ff',d:'#4a8fbd',c:'#8fd3ff'}];
-const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,course:0,hs:{},rs:'M',rc:''};
+const store={n:1,names:['Spiller 1','Spiller 2','Spiller 3','Spiller 4'],snd:1,course:COURSES.findIndex(c=>c.name==='Klassikeren'),hs:{},rs:'M',rc:'',user:''};
+const OLDC=['Klassikeren','Engen','Bakkerne','Skrænten','Slugten','Bjerget'];   // before v0.13 the lists were keyed by position
 try{const a=JSON.parse(localStorage.getItem('minigolf.v5')||'null');
   if(a){if(a.n>=1&&a.n<=4)store.n=a.n|0;if(Array.isArray(a.names))a.names.slice(0,4).forEach((v,i)=>{if(typeof v==='string'&&v.trim())store.names[i]=v.slice(0,10);});
-    store.snd=a.snd?1:0;if(a.course>=0&&a.course<COURSES.length)store.course=a.course|0;if(typeof a.rc==='string'&&codeOK(a.rc)){store.rc=a.rc;store.rs=a.rc[0];}
-    if(a.hs&&typeof a.hs==='object')for(const k in a.hs)if(Array.isArray(a.hs[k])&&(k==='0'||a.layout===8))store.hs[k]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}catch(e){}
+    store.snd=a.snd?1:0;{const cn=typeof a.cn==='string'?a.cn:OLDC[a.course|0],ix=COURSES.findIndex(c=>c.name===cn);if(ix>=0)store.course=ix;}if(typeof a.user==='string')store.user=a.user.slice(0,12);if(typeof a.rc==='string'&&codeOK(a.rc)){store.rc=a.rc;store.rs=a.rc[0];}
+    if(a.hs&&typeof a.hs==='object')for(const k in a.hs){const nm=a.layout>=9?k:OLDC[+k];if(nm&&Array.isArray(a.hs[k])&&(nm==='Klassikeren'||a.layout>=8))store.hs[nm]=a.hs[k].filter(e=>e&&typeof e.name==='string'&&typeof e.total==='number').slice(0,10);}}}catch(e){}
 if(!codeOK(store.rc))store.rc=newCode(store.rs);
-const hsList=ci=>store.hs[ci]||(store.hs[ci]=[]);
-const save=()=>{try{store.layout=8;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
+const hsList=ci=>store.hs[COURSES[ci].name]||(store.hs[COURSES[ci].name]=[]);
+const save=()=>{try{store.layout=9;store.cn=COURSES[store.course].name;localStorage.setItem('minigolf.v5',JSON.stringify(store));}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Sound: small synthesised effects, no audio files ----------
@@ -671,7 +699,7 @@ function hud(){
 function startHole(i){
   g.hole=i;const h=HOLES[i];
   for(const p of g.players){p.pos=[h.tee[0],h.tee[1]];p.strokes=0;p.done=false;p.scores.length=i;}
-  g.cur=i%g.players.length;g.paused=false;parts=[];cam.z=1;cam.x=FW/2;cam.y=FH/2;
+  g.cur=i%g.players.length;g.paused=false;parts=[];cam.z=1.9;cam.x=h.cup[0];cam.y=h.cup[1];g.intro=1.5;   // the camera starts at the cup and drifts back to the whole hole
   turn();if(g.players.length>1)toast(P().name+' starter',1100);
 }
 // Puts the current player's ball in play.
@@ -742,16 +770,33 @@ function cardHTML(){
 }
 function endRound(){
   const d=new Date(),date=('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
-  const mine=g.players.map(p=>({name:p.name,total:sum(p.scores),date,id:Math.random()}));
-  const rnd=COURSES[CI].rnd,list=rnd?[]:store.hs[CI]=hsList(CI).concat(mine).map((e,i)=>({e,i})).sort((a,b)=>a.e.total-b.e.total||a.i-b.i).map(o=>o.e).slice(0,10);
-  g.fresh=mine.filter(e=>list.includes(e)).map(e=>e.id);if(!rnd)save();
-  const tots=mine.map(e=>e.total),low=Math.min(...tots),win=g.players.filter((p,i)=>tots[i]===low),multi=g.players.length>1;
-  const rank=list.findIndex(e=>g.fresh.includes(e.id));
-  $('#eTitle').textContent=multi?(win.length>1?'Uafgjort!':win[0].name+' vinder!'):(rank===0?'Ny rekord!':'Runden er slut');
+  const rnd=COURSES[CI].rnd,tots=g.players.map(p=>sum(p.scores)),low=Math.min(...tots),win=g.players.filter((p,i)=>tots[i]===low),multi=g.players.length>1;
+  g.final=tots.map((t,i)=>({name:g.players[i].name,total:t}));g.date=date;g.fresh=[];
+  $('#eTitle').textContent=multi?(win.length>1?'Uafgjort!':win[0].name+' vinder!'):'Runden er slut';
   $('#eTotal').textContent=low;
-  $('#eSub').textContent='slag · '+rel(low-PAR)+(low===PAR?'':' i forhold til par '+PAR)+' · '+COURSES[CI].name+(rnd?' '+COURSES[CI].code:'')+(rank>=0?' · nr. '+(rank+1)+' på highscoren':'');
+  $('#eSub').textContent='slag · '+rel(low-PAR)+(low===PAR?'':' i forhold til par '+PAR)+' · '+COURSES[CI].name+(rnd?' '+COURSES[CI].code:'');
   $('#eCard').innerHTML=cardHTML()+(multi?'<table class="hs">'+g.players.map((p,i)=>'<tr><td></td><td><i class="dot" style="background:'+COLS[p.ci].c+'"></i>'+esc(p.name)+'</td><td class="n">'+tots[i]+'</td><td class="d">'+rel(tots[i]-PAR)+'</td></tr>').join('')+'</table>':'');
+  $('#eInputs').innerHTML=g.players.map((p,i)=>{const v=(i===0&&store.user)||(/^Spiller \d$/.test(store.names[p.ci])?'':store.names[p.ci]);
+    return '<div class="prow"><i class="dot" style="background:'+COLS[p.ci].c+'"></i><input maxlength="12" data-i="'+i+'" value="'+esc(v)+'" placeholder="Dit brugernavn" aria-label="Brugernavn for spiller '+(i+1)+'" autocomplete="off"></div>';}).join('');
+  $('#eName').hidden=rnd;$('#bAgain').hidden=$('#bMenu').hidden=$('#bSeeHs').hidden=!rnd;
+  $('#eNameNote').textContent=multi?'Vælg et brugernavn til hver spiller for at komme på highscoren':'Vælg dit brugernavn for at komme på highscoren';
   g.state='end';only('#sEnd');sfx.finish(low-PAR<=-6?3:low-PAR<0?2:low-PAR===0?1:low-PAR<=4?0:-1);
+}
+// Puts the usernames and scores on the course's list (or skips it) and shows the buttons again.
+function saveScores(skip){
+  const multi=g.final.length>1;
+  if(!skip){
+    const inp=[...document.querySelectorAll('#eInputs input')],names=inp.map(e=>e.value.trim().slice(0,12));
+    const bad=names.findIndex(n=>!n);if(bad>=0){inp[bad].focus();inp[bad].classList.add('bad');return;}
+    const mine=g.final.map((e,i)=>({name:names[i],total:e.total,date:g.date,id:Math.random()}));
+    const list=store.hs[COURSES[CI].name]=hsList(CI).concat(mine).map((e,i)=>({e,i})).sort((a,b)=>a.e.total-b.e.total||a.i-b.i).map(o=>o.e).slice(0,10);
+    g.fresh=mine.filter(e=>list.includes(e)).map(e=>e.id);
+    store.user=names[0];g.players.forEach((p,i)=>{store.names[p.ci]=names[i];});save();
+    const rank=list.findIndex(e=>g.fresh.includes(e.id));
+    if(!multi&&rank===0)$('#eTitle').textContent='Ny rekord!';
+    $('#eSub').textContent+=(rank>=0?' · nr. '+(rank+1)+' på highscoren':' · ikke på highscoren');
+  }
+  $('#eName').hidden=true;$('#bAgain').hidden=$('#bMenu').hidden=$('#bSeeHs').hidden=false;
 }
 function showHs(){
   const ci=g.hsc==null||g.hsc>=RND?(store.course<RND?store.course:0):g.hsc,list=hsList(ci),c=COURSES[ci];g.hsc=ci;
@@ -764,6 +809,7 @@ function syncSnd(){document.querySelectorAll('.snd').forEach(b=>b.textContent='L
 function setupRows(){
   if(COURSES[RND].code!==store.rc)buildRandom(store.rc);
   $('#cRows').innerHTML=COURSES.map((c,i)=>{const b=c.rnd?null:hsList(i)[0];return '<button data-v="'+i+'" class="'+(i===store.course?'on':'')+'"><b>'+(i+1)+'. '+c.name+'</b><small>'+'★'.repeat(stars(c))+'☆'.repeat(5-stars(c))+' · par '+c.par+(c.rnd?' · '+c.code:b?' · bedst '+b.total:'')+'</small></button>';}).join('');
+  {const on=$('#cRows').querySelector('.on');if(on)$('#cRows').scrollTop=Math.max(0,on.offsetTop-$('#cRows').offsetTop-40);}
   $('#rnd').hidden=store.course!==RND;
   $('#segSty').innerHTML=Object.keys(STY).map(k=>'<button data-v="'+k+'" class="'+(k===store.rs?'on':'')+'">'+STY[k].name+'</button>').join('');
   $('#rCode').value=store.rc;
@@ -818,7 +864,8 @@ function update(dt){
   parts=parts.filter(p=>p.life>0);
   // camera: move in close when the ball is near the cup
   const near=nearCup()&&(g.state==='roll'||g.state==='aim'||g.state==='sunk');
-  const tz=near?1.6:1,tx=near?h.cup[0]*.55+b.x*.45:FW/2,ty=near?h.cup[1]*.55+b.y*.45:FH/2,k=Math.min(1,dt*3.2);
+  if(g.intro>0)g.intro-=dt;
+  const tz=near?1.6:1,tx=near?h.cup[0]*.55+b.x*.45:FW/2,ty=near?h.cup[1]*.55+b.y*.45:FH/2,k=Math.min(1,dt*(g.intro>0?1.7:3.2));
   cam.z+=(tz-cam.z)*k;cam.x+=(tx-cam.x)*k;cam.y+=(ty-cam.y)*k;
 }
 // The line the ball will take: straight to the first cushion, then a short stretch after the rebound.
@@ -1183,8 +1230,8 @@ function draw(){
     for(const r of [6+k*20,2+k*11]){ctx.beginPath();ctx.ellipse(b.x,b.y,r,r*.7,0,0,7);ctx.stroke();}
     if(k<1){drawBall(b,1-.5*k,ci,1-.85*k);ctx.fillStyle='rgba(30,95,150,'+.55*k+')';ctx.beginPath();ctx.arc(b.x,b.y,R*(1-.5*k),0,7);ctx.fill();}
   }else if(g.state==='roll'||g.state==='aim'||g.state==='sunk'){
-    const sc=g.state==='sunk'?Math.max(0,1-g.anim/.45):1;
-    if(sc>0)drawBall(b,sc,ci);
+    const sc=g.state==='sunk'?Math.max(0,1-g.anim/.45):1,hop=g.state==='sunk'?Math.sin(Math.min(1,g.anim/.3)*Math.PI)*5*Math.max(0,1-g.anim/.45):0;
+    if(sc>0)drawBall({x:b.x,y:b.y-hop},sc,ci);
   }
   for(const p of H.pipes)drawPipe(p);
   // flag
@@ -1193,6 +1240,14 @@ function draw(){
   ctx.strokeStyle='#f4f4f4';ctx.lineWidth=2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,cy-36);ctx.stroke();
   ctx.fillStyle='#e8452c';ctx.beginPath();ctx.moveTo(cx,cy-36);ctx.lineTo(cx+20,cy-29+sway);ctx.lineTo(cx,cy-22);ctx.closePath();ctx.fill();
   ctx.fillStyle='#b8321e';ctx.beginPath();ctx.moveTo(cx,cy-29);ctx.lineTo(cx+20,cy-29+sway);ctx.lineTo(cx,cy-22);ctx.closePath();ctx.fill();
+  // butterflies and a bird or two drifting over the course
+  for(let i=0;i<3;i++){const ph=i*2.1+g.hole*.7,t=g.t*(.16+i*.05)+ph,bx=FW/2+FW*.44*Math.sin(t*1.3+i),by=FH/2+FH*.4*Math.sin(t*.9+ph*2),fl=Math.abs(Math.cos(g.t*13+i*3)),col=['#ffd24d','#ff9bb3','#ffffff'][i];
+    ctx.fillStyle='rgba(0,0,0,.12)';ctx.beginPath();ctx.ellipse(bx+3,by+7,3.2,1.5,0,0,7);ctx.fill();
+    ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(bx-2.2*fl-.8,by-3,2.8*fl+.6,2.6,-.4,0,7);ctx.ellipse(bx+2.2*fl+.8,by-3,2.8*fl+.6,2.6,.4,0,7);ctx.fill();
+    ctx.fillStyle='#3a2f28';ctx.fillRect(bx-.6,by-5.5,1.2,5);}
+  for(let i=0;i<2;i++){const per=26+i*9,u=((g.t+i*13)%per)/per,bx=-30+u*(FW+60),by=60+i*230+Math.sin(u*9)*14,fl=Math.sin(g.t*9+i)*3;
+    ctx.fillStyle='rgba(0,0,0,.1)';ctx.beginPath();ctx.ellipse(bx+6,by+26,7,2.4,0,0,7);ctx.fill();
+    ctx.strokeStyle='#2c2a32';ctx.lineWidth=1.8;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(bx-8,by-fl);ctx.quadraticCurveTo(bx-3,by-4-fl,bx,by);ctx.quadraticCurveTo(bx+3,by-4-fl,bx+8,by-fl);ctx.stroke();}
   // particles
   for(const p of parts){ctx.globalAlpha=Math.min(1,p.life*2.5);ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y-p.z*.12,p.r,0,7);ctx.fill();}
   ctx.globalAlpha=1;
@@ -1248,7 +1303,7 @@ function setDrag(e){
   drag.moved=true;drag.dx=-lx/len;drag.dy=-ly/len;drag.p=Math.min(1,(len-10)/PULL);
 }
 cv.addEventListener('pointerdown',e=>{
-  if(g.state!=='aim'||g.paused||drag)return;
+  if(g.state!=='aim'||g.paused||drag||g.intro>0)return;
   drag={id:e.pointerId,sx:e.clientX,sy:e.clientY,dx:0,dy:0,p:0,moved:false};
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
   e.preventDefault();
@@ -1281,6 +1336,9 @@ $('#cRows').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.co
 $('#segSty').onclick=e=>{const b=e.target.closest('button');if(!b)return;store.rs=b.dataset.v;store.rc=newCode(store.rs);save();setupRows();};
 $('#bNew').onclick=()=>{store.rc=newCode(store.rs);save();setupRows();};
 $('#rCode').onchange=e=>{const v=e.target.value.trim().toUpperCase();if(codeOK(v)){store.rc=v;store.rs=v[0];save();}setupRows();};
+$('#bSave').onclick=()=>saveScores(false);$('#bSkip').onclick=()=>saveScores(true);
+$('#eInputs').addEventListener('input',e=>e.target.classList.remove('bad'));
+$('#bSeeHs').onclick=()=>{g.hsc=CI<RND?CI:null;showHs();};
 $('#segHs').onclick=e=>{const b=e.target.closest('button');if(!b)return;g.hsc=+b.dataset.v;showHs();};
 $('#bHsReset').onclick=e=>{if(e.target.dataset.arm){delete e.target.dataset.arm;store.hs[g.hsc]=[];g.fresh=[];save();showHs();}else{e.target.dataset.arm='1';e.target.textContent='Tryk igen for at slette';}};
 $('#bHow').onclick=()=>only('#sHow');
@@ -1315,7 +1373,7 @@ document.title='Minigolf '+VERSION;
 setCourse(store.course);resize();toMenu();requestAnimationFrame(frame);
 
 // Debug/test handle: lets a test simulate shots without touching the game state.
-window.MG={diff,avgDiff,stars,VERSION,get HOLES(){return HOLES;},COURSES,setCourse,g,cam,store,stepBall,MAXV,shoot,hit,startRound,startHole,
+window.MG={endRound,saveScores,showHs,diff,avgDiff,stars,VERSION,get HOLES(){return HOLES;},COURSES,setCourse,g,cam,store,stepBall,MAXV,shoot,hit,startRound,startHole,
   sim(hole,x,y,ang,p,t0){const v=MAXV*(.12+.88*p),b={x,y,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v},h=HOLES[hole];let r='roll',n=0,t=t0||0;
     while(r==='roll'&&n++<3000){r=stepBall(b,h,1/60,t);t+=1/60;
       if(r==='pipe'){const q=b.pipe,s=pipeSpeed(Math.hypot(b.vx,b.vy));b.x=q.b[0];b.y=q.b[1];b.vx=Math.cos(q.dir)*s;b.vy=Math.sin(q.dir)*s;r='roll';}}
